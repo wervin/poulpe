@@ -11,6 +11,7 @@ set(POULPE_SOURCES
     src/poulpe/display.c
     src/poulpe/editor.c
     src/poulpe/error.c
+    src/poulpe/layout.c
     src/poulpe/log.c
     src/poulpe/theme.c
 )
