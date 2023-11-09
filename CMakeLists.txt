@@ -8,10 +8,12 @@ add_subdirectory(externals/glslang)
 add_subdirectory(externals/sake)
 
 set(POULPE_SOURCES
+    src/poulpe/components/layout.c
+    src/poulpe/components/rectangle.c
+    src/poulpe/component.c
     src/poulpe/display.c
     src/poulpe/editor.c
     src/poulpe/error.c
-    src/poulpe/layout.c
     src/poulpe/log.c
     src/poulpe/theme.c
 )

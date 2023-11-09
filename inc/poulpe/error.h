@@ -1,17 +1,18 @@
 #ifndef POULPE_ERROR_H
 #define POULPE_ERROR_H
 
-#define POULPE_ERROR                                                           \
+#define POULPE_ERRORS                                                          \
     X(POULPE_ERROR_NONE,           0,  "No error")                             \
     X(POULPE_ERROR_VALUE,         -1,  "Value error")                          \
     X(POULPE_ERROR_FILE,          -2,  "File error")                           \
     X(POULPE_ERROR_MEMORY,        -3,  "Memory error")                         \
+    X(POULPE_ERROR_UNKNOWN,       -4,  "Unknown error")                        \
 
 enum poulpe_error 
 {
 #define X(def, id, str) def=id,
 
-    POULPE_ERROR
+    POULPE_ERRORS
 
 #undef X
 };

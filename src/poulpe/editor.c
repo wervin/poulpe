@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <cglm/cglm.h>
 
 #include <vulkan/vulkan.h>
@@ -12,8 +14,11 @@
 #include "poulpe/editor.h"
 #include "poulpe/display.h"
 #include "poulpe/theme.h"
-#include "poulpe/layout.h"
 #include "poulpe/log.h"
+
+#include "poulpe/component.h"
+#include "poulpe/components/layout.h"
+#include "poulpe/components/rectangle.h"
 
 #include "sake/vector.h"
 #include "sake/string.h"
@@ -22,7 +27,6 @@ struct _editor
 {
     uint32_t flags;
     struct poulpe_theme theme;
-    sake_string *commands;
 
     struct poulpe_layout *main_layout;
     struct poulpe_layout *tab_layout;
@@ -31,76 +35,37 @@ struct _editor
 
 struct _editor _editor = {0};
 
-static enum poulpe_error _init_layouts(void);
-static void update_layouts(void);
+static enum poulpe_error _init_main_layout(void);
+static enum poulpe_error _init_tab_layout(void);
+static enum poulpe_error _init_content_layout(void);
 
 enum poulpe_error poulpe_editor_init(void)
 {    
     enum poulpe_error status = POULPE_ERROR_NONE;
 
-    status = _init_layouts();
+    _editor.theme = poulpe_theme_light;
+
+    status = _init_main_layout();
     if (status != POULPE_ERROR_NONE)
         return status;
 
-    _editor.commands = sake_vector_new(sizeof(sake_string), (void (*) (void*)) sake_string_free);
-
-    {
-        sake_string t = sake_string_new("sake_string 1");
-        _editor.commands = sake_vector_push_back(_editor.commands, &t);
-    }
-
-    {
-        sake_string t = sake_string_new("sake_string 2");
-        _editor.commands = sake_vector_push_back(_editor.commands, &t);
-    }
-
-    {
-        sake_string t = sake_string_new("sake_string 3");
-        _editor.commands = sake_vector_push_back(_editor.commands, &t);
-    }
-
-    _editor.theme = poulpe_theme_light;
 
     return POULPE_ERROR_NONE;
 }
 
 enum poulpe_error poulpe_editor_draw(void)
 {        
+    ImVec2 min, max;
+
     igBegin("Poulpe", NULL, ImGuiWindowFlags_NoScrollbar);
 
-    update_layouts();
-    
-    poulpe_display_draw_rect_filled(_editor.main_layout->upper_left,
-                                    _editor.main_layout->lower_right,
-                                    _editor.main_layout->upper_left,
-                                    _editor.main_layout->lower_right,
-                                    _editor.theme.backgound);
+    igGetCursorScreenPos(&min);
+    igGetContentRegionAvail(&max);
+    max.x = min.x + fmax(max.x, 0.0f);
+    max.y = min.y + fmax(max.y, 0.0f);
 
-    poulpe_display_draw_rect_filled(_editor.tab_layout->upper_left,
-                                    _editor.tab_layout->lower_right,
-                                    _editor.tab_layout->upper_left,
-                                    _editor.tab_layout->lower_right,
-                                    _editor.theme.flash_color);
-    
-    poulpe_display_draw_rect_filled(_editor.content_layout->upper_left,
-                                    _editor.content_layout->lower_right,
-                                    _editor.content_layout->upper_left,
-                                    _editor.content_layout->lower_right,
-                                    _editor.theme.warning);
-
-    // ImVec2 position = {min.x + 2.0, min.y + 2.0};
-    // for (uint32_t i = 0; i < sake_vector_size(_editor.commands); i++)
-    // {
-    //     poulpe_display_draw_chars((vec2){position.x, position.y},
-    //                               _editor.theme.text,
-    //                               _editor.commands[i],
-    //                               NULL);
-    //     position.y += igGetFontSize();
-    // }
-
-    // poulpe_display_draw_rect_filled((vec2){min.x, max.y - 2},
-    //                                 (vec2){max.x, max.y},
-    //                                 _editor.theme.tab_inactive);
+    poulpe_component_update((struct poulpe_component *) _editor.main_layout, (vec2) {min.x, min.y}, (vec2) {max.x, max.y});
+    poulpe_component_draw((struct poulpe_component *) _editor.main_layout);
 
     igEnd();
 
@@ -109,49 +74,85 @@ enum poulpe_error poulpe_editor_draw(void)
 
 void poulpe_editor_destroy(void)
 {
-    sake_vector_free(_editor.commands);
     poulpe_layout_destroy(_editor.main_layout);
 }
 
-static enum poulpe_error _init_layouts(void)
+static enum poulpe_error _init_main_layout(void)
 {
     enum poulpe_error status = POULPE_ERROR_NONE;
     
     status = poulpe_layout_init(&_editor.main_layout);
     if (status != POULPE_ERROR_NONE)
         return status;
+    _editor.main_layout->type = POULPE_LAYOUT_TYPE_VBOX;
     
-    status = poulpe_layout_init(&_editor.tab_layout);
+    status = _init_tab_layout();
     if (status != POULPE_ERROR_NONE)
         return status;
 
-    status = poulpe_layout_init(&_editor.content_layout);
+    status = _init_content_layout();
     if (status != POULPE_ERROR_NONE)
         return status;
 
-    poulpe_layout_add_child(_editor.main_layout, _editor.tab_layout);
-    poulpe_layout_add_child(_editor.main_layout, _editor.content_layout);
-
-    _editor.main_layout->layout_type = POULPE_LAYOUT_TYPE_VBOX;
-    _editor.tab_layout->layout_type = POULPE_LAYOUT_TYPE_HBOX;
-    _editor.tab_layout->fill_width = true;
-    _editor.tab_layout->preferred_height = 50;
-    _editor.content_layout->layout_type = POULPE_LAYOUT_TYPE_VBOX;
-    _editor.content_layout->fill_width = true;
-    _editor.content_layout->fill_height = true;
+    poulpe_layout_add_child(_editor.main_layout, (struct poulpe_component *) _editor.tab_layout);
+    poulpe_layout_add_child(_editor.main_layout, (struct poulpe_component *) _editor.content_layout);
 
     return POULPE_ERROR_NONE;
 }
 
-static void update_layouts(void)
+static enum poulpe_error _init_tab_layout(void)
 {
-    ImVec2 min, max;
+    enum poulpe_error status = POULPE_ERROR_NONE;
+    struct poulpe_rectangle * bg1;
+    struct poulpe_rectangle * bg2;
 
-    igGetCursorScreenPos(&min);
-    igGetContentRegionAvail(&max);
-    max.x = min.x + fmax(max.x, 0.0f);
-    max.y = min.y + fmax(max.y, 0.0f);
+    status = poulpe_layout_init(&_editor.tab_layout);
+    if (status != POULPE_ERROR_NONE)
+        return status;
+    _editor.tab_layout->type = POULPE_LAYOUT_TYPE_HBOX;
+    _editor.tab_layout->base.fill_width = true;
+    _editor.tab_layout->base.preferred_height = 50;
 
-    poulpe_layout_update(_editor.main_layout, (vec2) {min.x, min.y}, (vec2) {max.x, max.y});
-    poulpe_layout_adjust(_editor.main_layout);
+    status = poulpe_rectangle_init(&bg1);
+    if (status != POULPE_ERROR_NONE)
+        return status;
+    bg1->base.fill_width = true;
+    bg1->base.fill_height = true;
+    memcpy(bg1->color, _editor.theme.warning, sizeof(vec4));
+
+    status = poulpe_rectangle_init(&bg2);
+    if (status != POULPE_ERROR_NONE)
+        return status;
+    bg2->base.fill_width = true;
+    bg2->base.fill_height = true;
+    memcpy(bg2->color, _editor.theme.string, sizeof(vec4));
+
+    poulpe_layout_add_child(_editor.tab_layout, (struct poulpe_component *) bg1);
+    poulpe_layout_add_child(_editor.tab_layout, (struct poulpe_component *) bg2);
+
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _init_content_layout(void)
+{
+    enum poulpe_error status = POULPE_ERROR_NONE;
+    struct poulpe_rectangle * bg;
+
+    status = poulpe_layout_init(&_editor.content_layout);
+    if (status != POULPE_ERROR_NONE)
+        return status;
+    _editor.content_layout->type = POULPE_LAYOUT_TYPE_VBOX;
+    _editor.content_layout->base.fill_width = true;
+    _editor.content_layout->base.fill_height = true;
+
+    status = poulpe_rectangle_init(&bg);
+    if (status != POULPE_ERROR_NONE)
+        return status;
+    bg->base.fill_width = true;
+    bg->base.fill_height = true;
+    memcpy(bg->color, _editor.theme.flash_color, sizeof(vec4));
+
+    poulpe_layout_add_child(_editor.content_layout, (struct poulpe_component *) bg);
+
+    return POULPE_ERROR_NONE;
 }
