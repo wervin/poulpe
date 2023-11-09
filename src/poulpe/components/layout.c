@@ -1,11 +1,9 @@
-#include <string.h>
-#include <stdlib.h>
-
 #include "poulpe/log.h"
 
 #include "poulpe/components/layout.h"
 
 #include "sake/vector.h"
+#include "sake/macro.h"
 
 static enum poulpe_error _adjust(struct poulpe_layout *layout);
 
@@ -52,12 +50,8 @@ enum poulpe_error poulpe_layout_update(struct poulpe_layout *layout, vec2 upper_
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
-    layout->base.x = upper_left[0];
-    layout->base.y = upper_left[1];
-    layout->base.width = lower_right[0] - upper_left[0];
-    layout->base.height = lower_right[1] - upper_left[1];
-    memcpy(layout->base.upper_left, upper_left, sizeof(vec2));
-    memcpy(layout->base.lower_right, lower_right, sizeof(vec2));
+    SAKE_MACRO_UNUSED(upper_left);
+    SAKE_MACRO_UNUSED(lower_right);
 
     error = _adjust(layout);
     if (error != POULPE_ERROR_NONE)

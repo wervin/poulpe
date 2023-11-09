@@ -7,9 +7,11 @@
 
 #include "poulpe/error.h"
 
-#define POULPE_COMPONENTS \
-    X(POULPE_COMPONENT_TYPE_LAYOUT, 0, layout) \
-    X(POULPE_COMPONENT_TYPE_RECTANGLE, 1, rectangle)
+#define POULPE_COMPONENTS                            \
+    X(POULPE_COMPONENT_TYPE_LAYOUT, 0, layout)       \
+    X(POULPE_COMPONENT_TYPE_RECTANGLE, 1, rectangle) \
+    X(POULPE_COMPONENT_TYPE_TABMENU, 2, tabmenu)     \
+    X(POULPE_COMPONENT_TYPE_TABVIEW, 3, tabview)
 
 enum poulpe_component_type 
 {

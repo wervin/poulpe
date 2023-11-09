@@ -10,8 +10,9 @@ add_subdirectory(externals/sake)
 set(POULPE_SOURCES
     src/poulpe/components/layout.c
     src/poulpe/components/rectangle.c
+    src/poulpe/components/tabmenu.c
+    src/poulpe/components/tabview.c
     src/poulpe/component.c
-    src/poulpe/display.c
     src/poulpe/editor.c
     src/poulpe/error.c
     src/poulpe/log.c
