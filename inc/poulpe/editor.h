@@ -7,6 +7,7 @@
 
 enum poulpe_error poulpe_editor_init(void);
 enum poulpe_error poulpe_editor_draw(void);
+enum poulpe_error poulpe_editor_open_file(const char *path);
 void poulpe_editor_destroy(void);
 
 #endif /* POULPE_EDITOR_H */
