@@ -8,12 +8,8 @@
 
 #include <vulkan/vulkan.h>
 #include <cglm/cglm.h>
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include <cimgui.h>
-#define CIMGUI_USE_GLFW
-#define CIMGUI_USE_VULKAN
 #include <cimgui_impl.h>
 
 #include <sake/macro.h>
@@ -480,6 +476,12 @@ enum demo_error demo_renderer_init_ui(void)
     return DEMO_ERROR_VK;
   }
 
+  ImGuiIO *io = igGetIO();
+  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/Roboto-Medium.ttf", 16.0f, NULL, NULL);
+  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/Cousine-Regular.ttf", 18.0f, NULL, NULL);
+  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/DroidSans.ttf", 16.0f, NULL, NULL);
+  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/ProggyTiny.ttf", 14.0f, NULL, NULL);
+
   VkCommandBufferAllocateInfo allocInfo = {0};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -507,6 +509,8 @@ enum demo_error demo_renderer_init_ui(void)
   vkQueueSubmit(_backend.device.vk_graphic_queue, 1, &submitInfo, VK_NULL_HANDLE);
   vkQueueWaitIdle(_backend.device.vk_graphic_queue);
   vkFreeCommandBuffers(_backend.device.vk_device, _backend.ui.vk_commandpool, 1, &commandbuffer);
+
+  ImGui_ImplVulkan_DestroyFontUploadObjects();
 
   return DEMO_ERROR_NONE;
 }

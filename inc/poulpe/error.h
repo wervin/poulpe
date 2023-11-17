@@ -6,11 +6,12 @@
     X(POULPE_ERROR_VALUE,         -1,  "Value error")                          \
     X(POULPE_ERROR_FILE,          -2,  "File error")                           \
     X(POULPE_ERROR_MEMORY,        -3,  "Memory error")                         \
-    X(POULPE_ERROR_UNKNOWN,       -4,  "Unknown error")                        \
+    X(POULPE_ERROR_UNKNOWN,       -4,  "Unknown error")
 
-enum poulpe_error 
+enum poulpe_error
 {
-#define X(def, id, str) def=id,
+#define X(__def, __id, __str) \
+    __def = __id,
 
     POULPE_ERRORS
 

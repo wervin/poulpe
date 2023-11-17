@@ -1,33 +1,30 @@
-#include <string.h>
-
 #include "poulpe/component.h"
 
 #include "poulpe/log.h"
 
-#define X(def, id, type)                                                                                                 \
-    struct poulpe_##type;                                                                                                \
-    extern enum poulpe_error poulpe_##type##_update(struct poulpe_##type *component, vec2 upper_left, vec2 lower_right); \
-    extern enum poulpe_error poulpe_##type##_draw(struct poulpe_##type *component);                                      \
-    extern void poulpe_##type##_destroy(struct poulpe_##type *component);
+#define X(__def, __id, __type)                                                                                                           \
+    struct poulpe_##__type;                                                                                                              \
+    extern struct poulpe_##__type *poulpe_##__type##_new(void);                                                                          \
+    extern enum poulpe_error poulpe_##__type##_notify(struct poulpe_##__type *component, struct poulpe_event *event); \
+    extern enum poulpe_error poulpe_##__type##_draw(struct poulpe_##__type *component);                                                  \
+    extern void poulpe_##__type##_free(struct poulpe_##__type *component);
 
 POULPE_COMPONENTS
 
 #undef X
 
-
-enum poulpe_error poulpe_component_update(struct poulpe_component *component, vec2 upper_left, vec2 lower_right)
+struct poulpe_component *poulpe_component_new(enum poulpe_component_type type)
 {
-    switch (component->type)
+    struct poulpe_component *component;
+
+    switch (type)
     {
-#define X(def, id, type)                                           \
-    case id:                                                       \
-        component->x = upper_left[0];                              \
-        component->y = upper_left[1];                              \
-        component->width = lower_right[0] - upper_left[0];         \
-        component->height = lower_right[1] - upper_left[1];        \
-        memcpy(component->upper_left, upper_left, sizeof(vec2));   \
-        memcpy(component->lower_right, lower_right, sizeof(vec2)); \
-        return poulpe_##type##_update((struct poulpe_##type *)component, upper_left, lower_right);
+#define X(__def, __id, __type)                                          \
+    case __id:                                                          \
+        component = (struct poulpe_component *)poulpe_##__type##_new(); \
+        component->parent = NULL;                                       \
+        component->type = __id;                                         \
+        return component;
 
         POULPE_COMPONENTS
 
@@ -35,7 +32,7 @@ enum poulpe_error poulpe_component_update(struct poulpe_component *component, ve
 
     default:
         POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown component type");
-        return POULPE_ERROR_UNKNOWN;
+        return NULL;
     }
 }
 
@@ -43,9 +40,9 @@ enum poulpe_error poulpe_component_draw(struct poulpe_component *component)
 {
     switch (component->type)
     {
-#define X(def, id, type) \
-    case id:             \
-        return poulpe_##type##_draw((struct poulpe_##type *)component);
+#define X(__def, __id, __type) \
+    case __id:                 \
+        return poulpe_##__type##_draw((struct poulpe_##__type *)component);
 
         POULPE_COMPONENTS
 
@@ -57,13 +54,31 @@ enum poulpe_error poulpe_component_draw(struct poulpe_component *component)
     }
 }
 
-void poulpe_component_destroy(struct poulpe_component *component)
+enum poulpe_error poulpe_component_notify(struct poulpe_component *component, struct poulpe_event *event)
 {
     switch (component->type)
     {
-#define X(def, id, type)                                            \
-    case id:                                                        \
-        poulpe_##type##_destroy((struct poulpe_##type *)component); \
+#define X(__def, __id, __type) \
+    case __id:                 \
+        return poulpe_##__type##_notify((struct poulpe_##__type *)component, event);
+
+        POULPE_COMPONENTS
+
+#undef X
+
+    default:
+        POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown component type");
+        return POULPE_ERROR_UNKNOWN;
+    }
+}
+
+void poulpe_component_free(struct poulpe_component *component)
+{
+    switch (component->type)
+    {
+#define X(__def, __id, __type)                                       \
+    case __id:                                                       \
+        poulpe_##__type##_free((struct poulpe_##__type *)component); \
         break;
 
         POULPE_COMPONENTS

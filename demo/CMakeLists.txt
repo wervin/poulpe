@@ -26,3 +26,10 @@ set_property(TARGET demo PROPERTY C_STANDARD 17)
 
 target_compile_options(demo PRIVATE 
     -Wall -Wextra -Wpedantic)
+
+target_compile_definitions(demo PRIVATE 
+    CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+    GLFW_INCLUDE_VULKAN
+    CIMGUI_USE_GLFW
+    CIMGUI_USE_VULKAN
+)

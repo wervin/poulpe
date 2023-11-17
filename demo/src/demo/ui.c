@@ -1,10 +1,6 @@
 #include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include <cimgui.h>
-#define CIMGUI_USE_GLFW
-#define CIMGUI_USE_VULKAN
 #include <cimgui_impl.h>
 
 #include "poulpe/editor.h"

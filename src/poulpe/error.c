@@ -4,9 +4,9 @@ const char *poulpe_error_str(enum poulpe_error err)
 {
     switch (err)
     {
-#define X(def, id, str) \
-    case id:            \
-        return str;
+#define X(__def, __id, __str) \
+    case __id:                \
+        return __str;
 
         POULPE_ERRORS
 
