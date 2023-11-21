@@ -15,6 +15,7 @@ enum poulpe_event_type
 struct poulpe_event
 {
     enum poulpe_event_type type;
+    bool dirty;
 };
 
 struct poulpe_event_mouse
@@ -25,14 +26,32 @@ struct poulpe_event_mouse
     bool left_released;
     bool right_clicked;
     bool right_released;
+    bool dragged;
 };
 
 struct poulpe_event_keyboard
 {
     struct poulpe_event base;
-    uint8_t c;
-    bool ctrl;
-    bool super;
+    uint16_t *data;
+    uint32_t count;
+    bool delete;
+    bool backspace;
+    bool right;
+    bool left;
+    bool up;
+    bool down;
+    bool enter;
+    bool tab;
+    bool page_down;
+    bool page_up;
+    bool escape;
+    bool left_ctrl;
+    bool left_shift;
+    bool left_alt;
+    bool a;
+    bool c;
+    bool v;
+    bool x;
 };
 
 #endif /* POULPE_EVENT_H */

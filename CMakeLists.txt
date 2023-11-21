@@ -9,14 +9,16 @@ add_subdirectory(externals/sake)
 
 set(POULPE_SOURCES
     src/poulpe/components/cursor.c
+    src/poulpe/components/selection.c
     src/poulpe/components/textview.c
     src/poulpe/component.c
     src/poulpe/editor.c
     src/poulpe/error.c
     src/poulpe/io.c
     src/poulpe/log.c
-    src/poulpe/theme.c
     src/poulpe/text.c
+    src/poulpe/textbuffer.c
+    src/poulpe/theme.c
 )
 
 add_library(poulpe ${POULPE_SOURCES})
