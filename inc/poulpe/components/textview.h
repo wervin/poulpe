@@ -19,5 +19,6 @@ struct poulpe_textview
 
 void poulpe_textview_set_textbuffer(struct poulpe_textview *textview, struct poulpe_textbuffer *textbuffer);
 void poulpe_textview_get_coordinates(struct poulpe_textview *textview, ImVec2 mouse_position, ImVec2 *coordinates);
+float poulpe_textview_get_line_number_width(struct poulpe_textview *textview);
 
 #endif /* POULPE_COMPONENTS_TEXTVIEW_H */

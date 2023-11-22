@@ -50,6 +50,7 @@ enum poulpe_error poulpe_io_handle_keyboard(struct poulpe_component *component)
 enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
 {
     ImGuiIO *io = igGetIO();
+    ImGuiWindow *window = igGetCurrentWindow();
 
     struct poulpe_event_mouse event = {0};
 
@@ -57,6 +58,8 @@ enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
     igGetCursorScreenPos(&min);
     ImVec2 max;
     igGetContentRegionAvail(&max);
+    min.x += window->Scroll.x;
+    min.y += window->Scroll.y;
     max.x += min.x;
     max.y += min.y;
     ImRect region = {min, max};

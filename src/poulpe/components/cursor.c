@@ -54,11 +54,12 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
     {
         ImVec2 origin_screen_position;
         igGetCursorScreenPos(&origin_screen_position);
+        float max_line_number_size = poulpe_textview_get_line_number_width(cursor->textview);
 
         uint32_t line_length = poulpe_textbuffer_line_size(cursor->textview->textbuffer, cursor->line_index);
         uint32_t glyph_index = cursor->glyph_index > line_length ? line_length : cursor->glyph_index;
         float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textview->textbuffer, cursor->line_index, 0, glyph_index);
-        float text_start = origin_screen_position.x + text_size;
+        float text_start = origin_screen_position.x + max_line_number_size + text_size;
         float cursor_width = 1.5f;
 
         ImVec2 start = {text_start, origin_screen_position.y + cursor->line_index * igGetTextLineHeight()};

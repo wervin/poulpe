@@ -93,34 +93,87 @@ enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struc
 
         if (keyboard_event->delete)
         {
-            error = _handle_keyboard_delete(textview, keyboard_event);
-            if (error != POULPE_ERROR_NONE)
-                return error;
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                error = poulpe_selection_delete(textview->selection);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            else
+            {
+                error = _handle_keyboard_delete(textview, keyboard_event);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+            }
         }
 
         if (keyboard_event->backspace)
         {
-            error = _handle_keyboard_backspace(textview, keyboard_event);
-            if (error != POULPE_ERROR_NONE)
-                return error;
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                error = poulpe_selection_delete(textview->selection);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            else
+            {
+                error = _handle_keyboard_backspace(textview, keyboard_event);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+            }
         }
 
         if (keyboard_event->left)
         {
-            error = _handle_keyboard_left(textview, keyboard_event);
-            if (error != POULPE_ERROR_NONE)
-                return error;
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            else
+            {
+                error = _handle_keyboard_left(textview, keyboard_event);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+            }
         }
 
         if (keyboard_event->right)
         {
-            error = _handle_keyboard_right(textview, keyboard_event);
-            if (error != POULPE_ERROR_NONE)
-                return error;
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.end_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.end_glyph_index;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            else
+            {
+                error = _handle_keyboard_right(textview, keyboard_event);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+            }
         }
 
         if (keyboard_event->up)
         {
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                poulpe_selection_clear(textview->selection);
+            }
+
             error = _handle_keyboard_up(textview, keyboard_event);
             if (error != POULPE_ERROR_NONE)
                 return error;
@@ -128,6 +181,13 @@ enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struc
 
         if (keyboard_event->down)
         {
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.end_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.end_glyph_index;
+                poulpe_selection_clear(textview->selection);
+            }
+            
             error = _handle_keyboard_down(textview, keyboard_event);
             if (error != POULPE_ERROR_NONE)
                 return error;
@@ -135,6 +195,17 @@ enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struc
 
         if (keyboard_event->enter)
         {
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                error = poulpe_selection_delete(textview->selection);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            
             error = _handle_keyboard_enter(textview, keyboard_event);
             if (error != POULPE_ERROR_NONE)
                 return error;
@@ -142,6 +213,17 @@ enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struc
 
         if (keyboard_event->tab)
         {
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                error = poulpe_selection_delete(textview->selection);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+
             error = _handle_keyboard_tab(textview, keyboard_event);
             if (error != POULPE_ERROR_NONE)
                 return error;
@@ -149,6 +231,17 @@ enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struc
 
         if (keyboard_event->count)
         {
+            if (poulpe_selection_active(textview->selection))
+            {
+                textview->cursor->line_index = textview->selection->ajusted.start_line_index;
+                textview->cursor->glyph_index = textview->selection->ajusted.start_glyph_index;
+                error = poulpe_selection_delete(textview->selection);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
+                poulpe_selection_clear(textview->selection);
+                poulpe_cursor_reset(textview->cursor);
+            }
+            
             error = _handle_keyboard_default(textview, keyboard_event);
             if (error != POULPE_ERROR_NONE)
                 return error;
@@ -166,14 +259,36 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
 {
     ImVec2 origin_screen_position;
     igGetCursorScreenPos(&origin_screen_position);
-    float maximum_width = 0;
 
-    poulpe_component_draw((struct poulpe_component *)textview->selection);
+    ImDrawList *draw_list = igGetWindowDrawList();
+
+    float maximum_width = 0;
+    
+    if (poulpe_selection_active(textview->selection))
+        poulpe_component_draw((struct poulpe_component *)textview->selection);
+    
     poulpe_component_draw((struct poulpe_component *)textview->cursor);
 
-    for (uint32_t i = 0; i < poulpe_textbuffer_text_size(textview->textbuffer); i++)
+    uint32_t line_count = poulpe_textbuffer_text_size(textview->textbuffer);
+    float max_line_number_size = poulpe_textview_get_line_number_width(textview);
+
+    for (uint32_t i = 0; i < line_count; i++)
     {
         ImVec2 line_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
+
+        char line_number_buffer[16];
+        snprintf(line_number_buffer, 16, "%u  ", i + 1);
+        ImVec2 line_number_size;
+        ImFont_CalcTextSizeA(&line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line_number_buffer, NULL, NULL);
+        
+        ImVec2 line_number_start_position = { line_start_position.x + max_line_number_size - line_number_size.x, line_start_position.y};
+        ImDrawList_AddText_Vec2(draw_list,
+                                line_number_start_position,
+                                igColorConvertFloat4ToU32(poulpe_theme_dark.line_number),
+                                line_number_buffer,
+                                NULL);
+
+        ImVec2 text_start_position = { line_start_position.x + max_line_number_size, line_start_position.y};
 
         uint32_t line_length = poulpe_textbuffer_line_size(textview->textbuffer, i);
         /* worst case */
@@ -199,9 +314,8 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
                 ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
 
                 float font_size = igGetFontSize();
-                ImVec2 center = {line_start_position.x + text_size.x - 0.5 * space_size.x, line_start_position.y + 0.5 * font_size};
+                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
                 float radius = 1.5f;
-                ImDrawList *draw_list = igGetWindowDrawList();
                 ImDrawList_AddCircleFilled(draw_list,
                                            center,
                                            radius,
@@ -218,8 +332,7 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
 
                 float font_size = igGetFontSize();
                 float thickness = 0.5f;
-                ImVec2 center = {line_start_position.x + text_size.x - 0.5 * tab_size.x, line_start_position.y + 0.5 * font_size};
-                ImDrawList *draw_list = igGetWindowDrawList();
+                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * tab_size.x, text_start_position.y + 0.5 * font_size};
                 ImDrawList_AddLine(draw_list,
                                    (ImVec2) { center.x - 0.5 * tab_size.x, center.y - thickness},
                                    (ImVec2) { center.x - 0.25 * tab_size.x, center.y - thickness},
@@ -240,9 +353,8 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
         
         if (strlen(buffer))
         {
-            ImDrawList *draw_list = igGetWindowDrawList();
             ImDrawList_AddText_Vec2(draw_list,
-                                    line_start_position,
+                                    text_start_position,
                                     igColorConvertFloat4ToU32(poulpe_theme_dark.text),
                                     buffer,
                                     NULL);
@@ -269,6 +381,8 @@ void poulpe_textview_get_coordinates(struct poulpe_textview *textview, ImVec2 mo
     ImVec2 origin_screen_position;
     igGetCursorScreenPos(&origin_screen_position);
 
+    float max_line_number_size = poulpe_textview_get_line_number_width(textview);
+
     uint32_t line_index = 0;
     uint32_t last_line = poulpe_textbuffer_text_size(textview->textbuffer) - 1;
     while (line_index < last_line && mouse_position.y > origin_screen_position.y + (line_index + 1) * igGetTextLineHeight())
@@ -281,10 +395,10 @@ void poulpe_textview_get_coordinates(struct poulpe_textview *textview, ImVec2 mo
         float text_size_advance = poulpe_textbuffer_line_subset_textsize(textview->textbuffer, line_index, 0, glyph_index + 1);
 
         /* Find the closest glyph */
-        if (mouse_position.x < origin_screen_position.x + text_size_advance)
+        if (mouse_position.x < origin_screen_position.x + max_line_number_size + text_size_advance)
         {
-            float diff_text = mouse_position.x - origin_screen_position.x - text_size;
-            float diff_text_advance = origin_screen_position.x + text_size_advance - mouse_position.x;
+            float diff_text = mouse_position.x - origin_screen_position.x - max_line_number_size - text_size;
+            float diff_text_advance = origin_screen_position.x + max_line_number_size + text_size_advance - mouse_position.x;
             glyph_index = diff_text < diff_text_advance ? glyph_index: glyph_index + 1;
             break;
         }
@@ -293,6 +407,16 @@ void poulpe_textview_get_coordinates(struct poulpe_textview *textview, ImVec2 mo
 
     coordinates->x = line_index;
     coordinates->y = glyph_index;
+}
+
+float poulpe_textview_get_line_number_width(struct poulpe_textview *textview)
+{
+    uint32_t line_count = poulpe_textbuffer_text_size(textview->textbuffer);
+    char max_line_number_buffer[16];
+    snprintf(max_line_number_buffer, 16, "%u  ", line_count);
+    ImVec2 max_line_number_size;
+    ImFont_CalcTextSizeA(&max_line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, max_line_number_buffer, NULL, NULL);
+    return max_line_number_size.x;
 }
 
 static enum poulpe_error _handle_keyboard_delete(struct poulpe_textview *textview, struct poulpe_event_keyboard *event)
@@ -324,12 +448,12 @@ static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textview *text
     uint32_t line_length = poulpe_textbuffer_line_size(textview->textbuffer, textview->cursor->line_index);
     textview->cursor->glyph_index = textview->cursor->glyph_index > line_length ? line_length : textview->cursor->glyph_index;
 
-    if (textview->cursor->glyph_index)
+    if (textview->cursor->glyph_index != 0)
     {
         poulpe_textbuffer_line_erase(textview->textbuffer, textview->cursor->line_index, textview->cursor->glyph_index - 1);
         poulpe_cursor_move_left(textview->cursor);
     }
-    else if (textview->cursor->line_index)
+    else if (textview->cursor->line_index != 0)
     {
         uint32_t previous_size = poulpe_textbuffer_line_size(textview->textbuffer, textview->cursor->line_index - 1);
         for (uint32_t i = 0; i < poulpe_textbuffer_line_size(textview->textbuffer, textview->cursor->line_index); i++)
