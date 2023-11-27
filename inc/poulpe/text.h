@@ -36,6 +36,4 @@ poulpe_line poulpe_line_copy(poulpe_line from, poulpe_line to);
 enum poulpe_error poulpe_glyph_from_uf8(struct poulpe_glyph *glyph, uint8_t *buffer);
 enum poulpe_error poulpe_glyph_from_char(struct poulpe_glyph *glyph, uint32_t c);
 
-// enum poulpe_error poulpe_utf8_length(uint8_t utf8_header, uint32_t *length);
-
 #endif /* POULPE_TEXT_H */

@@ -223,4 +223,4 @@ void poulpe_textbuffer_line_erase(struct poulpe_textbuffer * textbuffer, uint32_
 struct poulpe_glyph * poulpe_textbuffer_line_at(struct poulpe_textbuffer * textbuffer, uint32_t line_index, uint32_t glyph_index)
 {
     return &textbuffer->text[line_index][glyph_index];
-}
+    }

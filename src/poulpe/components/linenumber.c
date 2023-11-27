@@ -94,7 +94,7 @@ void poulpe_linenumber_set_textedit(struct poulpe_linenumber *linenumber, struct
 static void _update_linenumber(struct poulpe_linenumber *linenumber)
 {
     ImGuiWindow *window = igGetCurrentWindowRead();
-    window->Scroll.y = linenumber->textedit->y;
+    // window->Scroll.y = linenumber->textedit->y;
 }
 
 static float _maximum_line_number_width(struct poulpe_linenumber *linenumber)

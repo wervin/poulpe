@@ -15,7 +15,6 @@ struct poulpe_textedit
     struct poulpe_selection *selection;
     uint32_t line_start;
     uint32_t line_end;
-    float y;
 };
 
 void poulpe_textedit_set_textbuffer(struct poulpe_textedit *textedit, struct poulpe_textbuffer *textbuffer);
