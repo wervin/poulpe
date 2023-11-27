@@ -5,7 +5,7 @@
 
 #include "poulpe/error.h"
 
-struct poulpe_textview;
+struct poulpe_textedit;
 
 struct poulpe_selection_area
 {
@@ -18,12 +18,12 @@ struct poulpe_selection_area
 struct poulpe_selection
 {
     struct poulpe_component base;
-    struct poulpe_textview *textview;
+    struct poulpe_textedit *textedit;
     struct poulpe_selection_area current;
     struct poulpe_selection_area ajusted;
 };
 
-void poulpe_selection_set_textview(struct poulpe_selection *selection, struct poulpe_textview *textview);
+void poulpe_selection_set_textedit(struct poulpe_selection *selection, struct poulpe_textedit *textedit);
 bool poulpe_selection_active(struct poulpe_selection *selection);
 enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection);
 void poulpe_selection_clear(struct poulpe_selection *selection);

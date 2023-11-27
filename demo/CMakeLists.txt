@@ -33,3 +33,10 @@ target_compile_definitions(demo PRIVATE
     CIMGUI_USE_GLFW
     CIMGUI_USE_VULKAN
 )
+
+add_custom_command(
+    TARGET demo POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/demo/assets
+            ${CMAKE_BINARY_DIR}/demo/assets
+)           

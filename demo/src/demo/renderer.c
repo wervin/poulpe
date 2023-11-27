@@ -477,10 +477,11 @@ enum demo_error demo_renderer_init_ui(void)
   }
 
   ImGuiIO *io = igGetIO();
-  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/Roboto-Medium.ttf", 16.0f, NULL, NULL);
-  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/Cousine-Regular.ttf", 18.0f, NULL, NULL);
-  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/DroidSans.ttf", 16.0f, NULL, NULL);
-  // ImFontAtlas_AddFontFromFileTTF(io->Fonts, "../_deps/cimgui-src/imgui/misc/fonts/ProggyTiny.ttf", 14.0f, NULL, NULL);
+
+  ImFont *cousine_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/Cousine-Regular.ttf", 18.0f, NULL, NULL);
+  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/DroidSans.ttf", 18.0f, NULL, NULL);
+  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/fontawesome-webfont.ttf", 18.0f, NULL, NULL);
+  io->FontDefault = cousine_font;
 
   VkCommandBufferAllocateInfo allocInfo = {0};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

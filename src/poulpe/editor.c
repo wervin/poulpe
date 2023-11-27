@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #include <cimgui.h>
 
@@ -27,7 +28,7 @@ enum poulpe_error poulpe_editor_init(void)
 {    
     enum poulpe_error error = POULPE_ERROR_NONE;
 
-    error = poulpe_editor_open_file("../../README.md");
+    error = poulpe_editor_open_file("../../test.md");
     if (error != POULPE_ERROR_NONE)
         return error;
 
@@ -38,30 +39,32 @@ enum poulpe_error poulpe_editor_draw(void)
 {   
     enum poulpe_error error = POULPE_ERROR_NONE;
 
+    ImGuiContext *context = igGetCurrentContext();
+    ImGuiWindow *window = igGetCurrentWindowRead();
     /* Will be removed in the future... */
     if (!igBegin("Editor", NULL, 0))
         goto end;
 
-    if (!igBeginChild_Str("Poulpe", (ImVec2) {0}, false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove))
-        goto end_child;
+    const float scrollbar_size = floor(fmax(context->FontSize * 1.10f, window->WindowRounding + 1.0f + context->FontSize * 0.2f));
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowMinSize, (ImVec2) {0.f, 0.f});
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {0.f, 0.f});
+    igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 1.f);
+    igPushStyleVar_Float(ImGuiStyleVar_ScrollbarSize, scrollbar_size);
 
-    error = poulpe_io_handle_keyboard((struct poulpe_component *) _editor.textview);
-    if (error != POULPE_ERROR_NONE)
-        goto end;
-    
-    error = poulpe_io_handle_mouse((struct poulpe_component *) _editor.textview);
-    if (error != POULPE_ERROR_NONE)
-        goto end;
+    if (!igBeginChild_Str("Poulpe", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove))
+        goto end_child;
     
     error = poulpe_component_draw((struct poulpe_component *) _editor.textview);
     if (error != POULPE_ERROR_NONE)
-        goto end;
+        goto end_child;
 
 end_child:
     igEndChild();
+    igPopStyleVar(4);
 
 end:
     igEnd();
+
     return error;
 }
 

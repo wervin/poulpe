@@ -5,18 +5,18 @@
 
 #include "poulpe/component.h"
 
-struct poulpe_textview;
+struct poulpe_textedit;
 
 struct poulpe_cursor
 {
     struct poulpe_component base;
-    struct poulpe_textview *textview;
+    struct poulpe_textedit *textedit;
     uint32_t line_index;
     uint32_t glyph_index;
     struct timeval timer;
 };
 
-void poulpe_cursor_set_textview(struct poulpe_cursor *cursor, struct poulpe_textview *textview);
+void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_textedit *textedit);
 void poulpe_cursor_reset(struct poulpe_cursor *cursor);
 void poulpe_cursor_move_up(struct poulpe_cursor *cursor);
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor);

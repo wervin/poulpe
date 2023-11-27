@@ -8,10 +8,12 @@
 #include "poulpe/error.h"
 #include "poulpe/event.h"
 
-#define POULPE_COMPONENTS                          \
-    X(POULPE_COMPONENT_TYPE_TEXTVIEW, 1, textview) \
-    X(POULPE_COMPONENT_TYPE_CURSOR, 2, cursor)     \
-    X(POULPE_COMPONENT_TYPE_SELECTION, 3, selection)
+#define POULPE_COMPONENTS                              \
+    X(POULPE_COMPONENT_TYPE_TEXTVIEW, 1, textview)     \
+    X(POULPE_COMPONENT_TYPE_CURSOR, 2, cursor)         \
+    X(POULPE_COMPONENT_TYPE_SELECTION, 3, selection)   \
+    X(POULPE_COMPONENT_TYPE_LINENUMBER, 4, linenumber) \
+    X(POULPE_COMPONENT_TYPE_TEXTEDIT, 5, textedit)
 
 enum poulpe_component_type
 {

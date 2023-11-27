@@ -50,7 +50,7 @@ enum poulpe_error poulpe_io_handle_keyboard(struct poulpe_component *component)
 enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
 {
     ImGuiIO *io = igGetIO();
-    ImGuiWindow *window = igGetCurrentWindow();
+    ImGuiWindow *window = igGetCurrentWindowRead();
 
     struct poulpe_event_mouse event = {0};
 

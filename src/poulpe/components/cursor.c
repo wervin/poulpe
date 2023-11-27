@@ -6,10 +6,11 @@
 #include <sake/macro.h>
 
 #include "poulpe/components/cursor.h"
-#include "poulpe/components/textview.h"
+#include "poulpe/components/textedit.h"
 
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
+#include "poulpe/textbuffer.h"
 
 #define CURSOR_BLINK_DELAY      750000
 
@@ -54,12 +55,11 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
     {
         ImVec2 origin_screen_position;
         igGetCursorScreenPos(&origin_screen_position);
-        float max_line_number_size = poulpe_textview_get_line_number_width(cursor->textview);
 
-        uint32_t line_length = poulpe_textbuffer_line_size(cursor->textview->textbuffer, cursor->line_index);
+        uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textbuffer, cursor->line_index);
         uint32_t glyph_index = cursor->glyph_index > line_length ? line_length : cursor->glyph_index;
-        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textview->textbuffer, cursor->line_index, 0, glyph_index);
-        float text_start = origin_screen_position.x + max_line_number_size + text_size;
+        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textbuffer, cursor->line_index, 0, glyph_index);
+        float text_start = origin_screen_position.x + text_size;
         float cursor_width = 1.5f;
 
         ImVec2 start = {text_start, origin_screen_position.y + cursor->line_index * igGetTextLineHeight()};
@@ -74,9 +74,9 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
     return POULPE_ERROR_NONE;
 }
 
-void poulpe_cursor_set_textview(struct poulpe_cursor *cursor, struct poulpe_textview *textview)
+void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_textedit *textedit)
 {
-    cursor->textview = textview;
+    cursor->textedit = textedit;
 }
 
 void poulpe_cursor_reset(struct poulpe_cursor *cursor)
@@ -93,7 +93,7 @@ void poulpe_cursor_move_up(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor)
 {
-    if (cursor->line_index < (poulpe_textbuffer_text_size(cursor->textview->textbuffer) - 1))
+    if (cursor->line_index < (poulpe_textbuffer_text_size(cursor->textedit->textbuffer) - 1))
         cursor->line_index++;
     poulpe_cursor_reset(cursor);
 }
@@ -107,7 +107,7 @@ void poulpe_cursor_move_left(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_right(struct poulpe_cursor *cursor)
 {
-    if (cursor->glyph_index < (poulpe_textbuffer_line_size(cursor->textview->textbuffer, cursor->line_index)))
+    if (cursor->glyph_index < (poulpe_textbuffer_line_size(cursor->textedit->textbuffer, cursor->line_index)))
         cursor->glyph_index++;
     poulpe_cursor_reset(cursor);
 }
