@@ -278,7 +278,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     igSameLine(0.0f, 0.0f);
-    if (!igBeginChild_Str("Poulpe", (ImVec2) {0}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_HorizontalScrollbar))
+    if (!igBeginChild_Str("Poulpe##textedit", (ImVec2) {0}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_HorizontalScrollbar))
         goto end_child;
 
     error = poulpe_io_handle_keyboard((struct poulpe_component *) textedit);
@@ -398,7 +398,6 @@ void poulpe_textedit_set_textbuffer(struct poulpe_textedit *textedit, struct pou
 
 void poulpe_textedit_ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 {
-    ImGuiStyle *style = igGetStyle();
     ImGuiWindow *window = igGetCurrentWindowRead();
     ImVec2 content;
     igGetContentRegionAvail(&content);
@@ -419,7 +418,7 @@ void poulpe_textedit_ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 
     if (textedit->cursor->line_index > end)
     {
-        scroll_y = (textedit->cursor->line_index  + 1) * igGetTextLineHeight() - content.y - style->FramePadding.y * 2.0f;
+        scroll_y = (textedit->cursor->line_index  + 1) * igGetTextLineHeight() - content.y;
         window->DC.CursorPos.y += (window->Scroll.y - scroll_y);
         window->Scroll.y = scroll_y;
     }
@@ -436,7 +435,7 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
     textedit->line_end = fmin(textedit->line_end, poulpe_textbuffer_text_size(textedit->textbuffer));
     textedit->line_end = fmax(textedit->line_end, 0);
 
-    // textedit->y = window->Scroll.y;
+    textedit->scroll_y = window->Scroll.y;
     
     return POULPE_ERROR_NONE;
 }

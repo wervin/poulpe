@@ -7,6 +7,7 @@
 
 #include "poulpe/components/linenumber.h"
 #include "poulpe/components/textedit.h"
+#include "poulpe/components/cursor.h"
 
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
@@ -44,8 +45,12 @@ enum poulpe_error poulpe_linenumber_notify(struct poulpe_linenumber *linenumber,
 enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
 {
     float max_line_number_size = _maximum_line_number_width(linenumber);
+
+    igPushStyleVar_Vec2(ImGuiStyleVar_FramePadding, (ImVec2) {10.f, 0.f});
+
+    ImGuiStyle *style = igGetStyle();
     
-    if (!igBeginChild_Str("Poulpe##linenumber", (ImVec2) {max_line_number_size, 0.0f}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar))
+    if (!igBeginChild_Str("Poulpe##linenumber", (ImVec2) {max_line_number_size + 2 * style->FramePadding.x, 0.0f}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar))
         goto end_child;
 
     _update_linenumber(linenumber);
@@ -53,26 +58,37 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
     ImVec2 origin_screen_position;
     igGetCursorScreenPos(&origin_screen_position);
 
+    ImDrawList *draw_list = igGetWindowDrawList();
+
+    {
+        uint32_t range = linenumber->textedit->line_end - linenumber->textedit->line_start;
+        ImVec2 size = {max_line_number_size + 2 * style->FramePadding.x, range * igGetTextLineHeight()};
+        ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y + linenumber->textedit->line_start * igGetTextLineHeight()};
+        ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + linenumber->textedit->line_start * igGetTextLineHeight() + size.y};
+        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_background), 0.0f, 0);
+    }
+
     for (uint32_t i = linenumber->textedit->line_start; i < linenumber->textedit->line_end; i++)
     {
         ImVec2 line_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
 
         char line_number_buffer[16];
-        snprintf(line_number_buffer, 16, "%u  ", i + 1);
+        snprintf(line_number_buffer, 16, "%u", i + 1);
         ImVec2 line_number_size;
         ImFont_CalcTextSizeA(&line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line_number_buffer, NULL, NULL);
 
-        ImVec2 line_number_start_position = {line_start_position.x + max_line_number_size - line_number_size.x, line_start_position.y};
-        ImDrawList *draw_list = igGetWindowDrawList();
+        ImU32 color = i == linenumber->textedit->cursor->line_index ? igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_active) : igColorConvertFloat4ToU32(poulpe_theme_dark.line_number);
+
+        ImVec2 line_number_start_position = {line_start_position.x + max_line_number_size - line_number_size.x + style->FramePadding.x, line_start_position.y};
         ImDrawList_AddText_Vec2(draw_list,
                                 line_number_start_position,
-                                igColorConvertFloat4ToU32(poulpe_theme_dark.line_number),
+                                color,
                                 line_number_buffer,
                                 NULL);
     }
 
     {
-        ImVec2 size = {max_line_number_size, poulpe_textbuffer_text_size(linenumber->textedit->textbuffer) * igGetTextLineHeight()};
+        ImVec2 size = {max_line_number_size + 2 * style->FramePadding.x, poulpe_textbuffer_text_size(linenumber->textedit->textbuffer) * igGetTextLineHeight()};
         ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y};
         ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + size.y};
         ImRect rect = {upper_left, lower_right};
@@ -82,6 +98,7 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
 
 end_child:
     igEndChild();
+    igPopStyleVar(1);
 
     return POULPE_ERROR_NONE;
 }
@@ -94,14 +111,15 @@ void poulpe_linenumber_set_textedit(struct poulpe_linenumber *linenumber, struct
 static void _update_linenumber(struct poulpe_linenumber *linenumber)
 {
     ImGuiWindow *window = igGetCurrentWindowRead();
-    // window->Scroll.y = linenumber->textedit->y;
+    window->DC.CursorPos.y += (window->Scroll.y - linenumber->textedit->scroll_y);
+    window->Scroll.y = linenumber->textedit->scroll_y;
 }
 
 static float _maximum_line_number_width(struct poulpe_linenumber *linenumber)
 {
     uint32_t line_count = poulpe_textbuffer_text_size(linenumber->textedit->textbuffer);
     char max_line_number_buffer[16];
-    snprintf(max_line_number_buffer, 16, "%u  ", line_count);
+    snprintf(max_line_number_buffer, 16, "%u", line_count);
     ImVec2 max_line_number_size;
     ImFont_CalcTextSizeA(&max_line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, max_line_number_buffer, NULL, NULL);
     return max_line_number_size.x;

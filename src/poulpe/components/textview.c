@@ -49,7 +49,7 @@ void poulpe_textview_free(struct poulpe_textview *textview)
 
 enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
 {
-    // poulpe_component_draw((struct poulpe_component *)textview->linenumber);
+    poulpe_component_draw((struct poulpe_component *)textview->linenumber);
     poulpe_component_draw((struct poulpe_component *)textview->textedit);
 
     return POULPE_ERROR_NONE;

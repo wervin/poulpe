@@ -22,5 +22,3 @@
 + undo (CTRL-Z)
 + redo (CTRL-Y)
 + fix focus issues
-+ fix horizontal scrollbar issues
-+ custom scrollbars ?

@@ -41,6 +41,9 @@ enum poulpe_error poulpe_editor_draw(void)
 
     ImGuiContext *context = igGetCurrentContext();
     ImGuiWindow *window = igGetCurrentWindowRead();
+
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {20.f, 20.f});
+
     /* Will be removed in the future... */
     if (!igBegin("Editor", NULL, 0))
         goto end;
@@ -64,6 +67,7 @@ end_child:
 
 end:
     igEnd();
+    igPopStyleVar(1);
 
     return error;
 }
