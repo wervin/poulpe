@@ -18,15 +18,15 @@ struct poulpe_textbuffer * poulpe_textbuffer_new(void)
     return textbuffer;
 }
 
-enum poulpe_error poulpe_textbuffer_open(struct poulpe_textbuffer * textbuffer, const char *filename)
+enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuffer, const char *path)
 {
     uint32_t size;
     uint8_t *buffer;
 
-    FILE *fd = fopen(filename, "r");
+    FILE *fd = fopen(path, "r");
     if (!fd)
     {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, filename);
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, path);
         return POULPE_ERROR_MEMORY;
     }
 
@@ -112,13 +112,23 @@ enum poulpe_error poulpe_textbuffer_open(struct poulpe_textbuffer * textbuffer, 
         }
     }
 
+    textbuffer->filename = sake_string_new(strrchr(path, '/') ? strrchr(path, '/') + 1 : path);
+    if (!textbuffer->filename)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to save filename");
+        return POULPE_ERROR_MEMORY;
+    }
+
     free(buffer);
     return POULPE_ERROR_NONE;
 }
 
 void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer)
 {
-    poulpe_text_free(textbuffer->text);
+    if (textbuffer->filename)
+        sake_string_free(textbuffer->filename);
+    if (textbuffer->text)
+        poulpe_text_free(textbuffer->text);
     free(textbuffer);
 }
 

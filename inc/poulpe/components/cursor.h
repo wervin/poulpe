@@ -18,6 +18,7 @@ struct poulpe_cursor
 
 void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_textedit *textedit);
 void poulpe_cursor_reset(struct poulpe_cursor *cursor);
+void poulpe_cursor_update(struct poulpe_cursor *cursor);
 void poulpe_cursor_move_up(struct poulpe_cursor *cursor);
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor);
 void poulpe_cursor_move_left(struct poulpe_cursor *cursor);

@@ -49,22 +49,8 @@ enum poulpe_error poulpe_io_handle_keyboard(struct poulpe_component *component)
 
 enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
 {
-    ImGuiIO *io = igGetIO();
-    ImGuiWindow *window = igGetCurrentWindowRead();
-
     struct poulpe_event_mouse event = {0};
-
-    ImVec2 min;
-    igGetCursorScreenPos(&min);
-    ImVec2 max;
-    igGetContentRegionAvail(&max);
-    min.x += window->Scroll.x;
-    min.y += window->Scroll.y;
-    max.x += min.x;
-    max.y += min.y;
-    ImRect region = {min, max};
-    if (!ImRect_Contains_Vec2(&region, io->MousePos))
-        return POULPE_ERROR_NONE;
+    ImGuiIO *io = igGetIO();
 
     event.base.type = POULPE_EVENT_TYPE_MOUSE;
 
@@ -73,6 +59,12 @@ enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
     event.right_clicked = _update_dirty_bit(io->MouseClicked[1], (struct poulpe_event *) &event);
     event.right_released = _update_dirty_bit(io->MouseReleased[1], (struct poulpe_event *) &event);
     event.dragged = _update_dirty_bit(igIsMouseDragging(0, -1.0f), (struct poulpe_event *) &event);
+    
+    event.left_clicked_position.x = io->MouseClickedPos[0].x;
+    event.left_clicked_position.y = io->MouseClickedPos[0].y;
+
+    event.right_clicked_position.x = io->MouseClickedPos[1].x;
+    event.right_clicked_position.y = io->MouseClickedPos[1].y;
 
     event.position.x = io->MousePos.x;
     event.position.y = io->MousePos.y;

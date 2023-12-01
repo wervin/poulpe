@@ -3,12 +3,11 @@
 ## TODO
 
 + theme management
-+ patch selection when clicking on the scrollbar
-+ drag should move the scrollbar
-+ correct window management
-+ tabs management
 + colorize text
 + print compilation errors
+
++ select tab / space length
+
 + double click (select word)
 + triple click (select line)
 + find text (CTRL + F)
@@ -21,4 +20,3 @@
 + select all (CTRL-A)
 + undo (CTRL-Z)
 + redo (CTRL-Y)
-+ fix focus issues

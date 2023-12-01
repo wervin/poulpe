@@ -11,6 +11,7 @@ set(POULPE_SOURCES
     src/poulpe/components/cursor.c
     src/poulpe/components/linenumber.c
     src/poulpe/components/selection.c
+    src/poulpe/components/tabview.c
     src/poulpe/components/textedit.c
     src/poulpe/components/textview.c
     src/poulpe/component.c

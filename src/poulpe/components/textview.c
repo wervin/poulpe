@@ -13,6 +13,7 @@
 #include "poulpe/components/linenumber.h"
 #include "poulpe/components/textedit.h"
 
+#include "poulpe/textbuffer.h"
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
 
@@ -31,11 +32,13 @@ struct poulpe_textview * poulpe_textview_new(void)
     if (!textview->textedit)
         return NULL;
 
+    poulpe_textedit_set_textview(textview->textedit, textview);
+
     textview->linenumber = (struct poulpe_linenumber *) poulpe_component_new(POULPE_COMPONENT_TYPE_LINENUMBER);
     if (!textview->linenumber)
         return NULL;
 
-    poulpe_linenumber_set_textedit(textview->linenumber, textview->textedit);
+    poulpe_linenumber_set_textview(textview->linenumber, textview);
     
     return textview;
 }
@@ -49,18 +52,43 @@ void poulpe_textview_free(struct poulpe_textview *textview)
 
 enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
 {
-    poulpe_component_draw((struct poulpe_component *)textview->linenumber);
-    poulpe_component_draw((struct poulpe_component *)textview->textedit);
+    enum poulpe_error error = POULPE_ERROR_NONE;
 
-    return POULPE_ERROR_NONE;
+    if (!igBeginChild_Str("Poulpe##textview", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove))
+        goto end_child;
+    
+    error = poulpe_component_draw((struct poulpe_component *)textview->linenumber);
+    if (error != POULPE_ERROR_NONE)
+            goto end_child;
+    
+    error = poulpe_component_draw((struct poulpe_component *)textview->textedit);
+    if (error != POULPE_ERROR_NONE)
+            goto end_child;
+
+end_child:
+    igEndChild();
+
+    return error;
 }
 
 enum poulpe_error poulpe_textview_notify(struct poulpe_textview *textview, struct poulpe_event *event)
 {
-    return poulpe_component_notify((struct poulpe_component *) textview->textedit, event);
+    SAKE_MACRO_UNUSED(textview);
+    SAKE_MACRO_UNUSED(event);
+    return POULPE_ERROR_NONE;
 }
 
-void poulpe_textview_set_textbuffer(struct poulpe_textview *textview, struct poulpe_textbuffer *textbuffer)
+enum poulpe_error poulpe_textview_open_file(struct poulpe_textview *textview, const char *path)
 {
-    poulpe_textedit_set_textbuffer(textview->textedit, textbuffer);
+    enum poulpe_error error = POULPE_ERROR_NONE;
+
+    textview->textbuffer = poulpe_textbuffer_new();
+    if (!textview->textbuffer)
+        return POULPE_ERROR_MEMORY;
+
+    error = poulpe_textbuffer_open_file(textview->textbuffer, path);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    return POULPE_ERROR_NONE;
 }

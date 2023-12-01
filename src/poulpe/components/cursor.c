@@ -7,6 +7,7 @@
 
 #include "poulpe/components/cursor.h"
 #include "poulpe/components/textedit.h"
+#include "poulpe/components/textview.h"
 
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
@@ -44,21 +45,23 @@ enum poulpe_error poulpe_cursor_notify(struct poulpe_cursor *cursor, struct poul
 
 enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
 {
+    if (!igIsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+        return POULPE_ERROR_NONE;
+    
     struct timeval current_time;
     gettimeofday(&current_time, NULL);
 
     long seconds = current_time.tv_sec - cursor->timer.tv_sec;
     long microseconds = current_time.tv_usec - cursor->timer.tv_usec;
     double elasped = seconds * 1e6 + microseconds;
-
     if (elasped < CURSOR_BLINK_DELAY)
     {
+        ImGuiStyle *style = igGetStyle();
         ImVec2 origin_screen_position;
         igGetCursorScreenPos(&origin_screen_position);
+        origin_screen_position.x += style->FramePadding.x;
 
-        uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textbuffer, cursor->line_index);
-        uint32_t glyph_index = cursor->glyph_index > line_length ? line_length : cursor->glyph_index;
-        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textbuffer, cursor->line_index, 0, glyph_index);
+        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textview->textbuffer, cursor->line_index, 0, cursor->glyph_index);
         float text_start = origin_screen_position.x + text_size;
         float cursor_width = 1.5f;
 
@@ -79,6 +82,12 @@ void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_text
     cursor->textedit = textedit;
 }
 
+void poulpe_cursor_update(struct poulpe_cursor *cursor)
+{
+    uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->line_index);
+    cursor->glyph_index = cursor->glyph_index > line_length ? line_length : cursor->glyph_index;
+}
+
 void poulpe_cursor_reset(struct poulpe_cursor *cursor)
 {
     gettimeofday(&cursor->timer, NULL);
@@ -93,7 +102,7 @@ void poulpe_cursor_move_up(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor)
 {
-    if (cursor->line_index < (poulpe_textbuffer_text_size(cursor->textedit->textbuffer) - 1))
+    if (cursor->line_index < (poulpe_textbuffer_text_size(cursor->textedit->textview->textbuffer) - 1))
         cursor->line_index++;
     poulpe_cursor_reset(cursor);
 }
@@ -107,7 +116,7 @@ void poulpe_cursor_move_left(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_right(struct poulpe_cursor *cursor)
 {
-    if (cursor->glyph_index < (poulpe_textbuffer_line_size(cursor->textedit->textbuffer, cursor->line_index)))
+    if (cursor->glyph_index < (poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->line_index)))
         cursor->glyph_index++;
     poulpe_cursor_reset(cursor);
 }

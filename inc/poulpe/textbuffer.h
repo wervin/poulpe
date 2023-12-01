@@ -4,18 +4,22 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <sake/string.h>
+
 #include "poulpe/text.h"
 #include "poulpe/error.h"
 
 struct poulpe_textbuffer
 {
     poulpe_text text;
+    sake_string filename;
+    sake_string path;
     bool dirty;
 };
 
 struct poulpe_textbuffer * poulpe_textbuffer_new(void);
-enum poulpe_error poulpe_textbuffer_open(struct poulpe_textbuffer * textbuffer, const char *filename);
 void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer);
+enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuffer, const char *path);
 
 uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer * textbuffer);
 enum poulpe_error poulpe_textbuffer_new_line(struct poulpe_textbuffer * textbuffer, uint32_t line_index, uint32_t glyph_index);

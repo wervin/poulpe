@@ -99,7 +99,7 @@ void poulpe_line_pop_back(poulpe_line line)
 
 void poulpe_line_erase(poulpe_line line, uint32_t index)
 {
-                                                                                                                                    sake_vector_erase(line, index);
+    sake_vector_erase(line, index);
 }
 
 poulpe_line poulpe_line_copy(poulpe_line from, poulpe_line to)

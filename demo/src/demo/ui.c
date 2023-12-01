@@ -50,6 +50,8 @@ void demo_ui_draw(void)
 
     igNewFrame();
 
+    igShowDebugLogWindow(NULL);
+
     igShowMetricsWindow(NULL);
 
     poulpe_editor_draw();

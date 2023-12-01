@@ -13,7 +13,8 @@
     X(POULPE_COMPONENT_TYPE_CURSOR, 2, cursor)         \
     X(POULPE_COMPONENT_TYPE_SELECTION, 3, selection)   \
     X(POULPE_COMPONENT_TYPE_LINENUMBER, 4, linenumber) \
-    X(POULPE_COMPONENT_TYPE_TEXTEDIT, 5, textedit)
+    X(POULPE_COMPONENT_TYPE_TEXTEDIT, 5, textedit)     \
+    X(POULPE_COMPONENT_TYPE_TABVIEW, 6, tabview)
 
 enum poulpe_component_type
 {
