@@ -97,7 +97,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     ImGuiStyle *style = igGetStyle();
 
     igSameLine(0.0f, 0.0f);
-    if (!igBeginChild_Str("Poulpe##textedit", (ImVec2) {0}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysHorizontalScrollbar))
+    if (!igBeginChild_Str("Poulpe##textedit", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysHorizontalScrollbar))
         goto end_child;
 
     error = poulpe_io_handle_keyboard((struct poulpe_component *) textedit);
@@ -118,13 +118,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     {
         ImGuiWindow *window = igGetCurrentWindowRead();
-        ImVec2 content;
-        content.x = window->Scroll.x + window->WorkRect.Max.x - window->DC.CursorPos.x;
-        content.y = window->Scroll.y + window->WorkRect.Max.y - window->DC.CursorPos.y;
-        ImVec2 size = {content.x, content.y };
-        ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y + textedit->line_start * igGetTextLineHeight()};
-        ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + textedit->line_start * igGetTextLineHeight() + size.y};
-        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound), 0.0f, 0);
+        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound), 0.0f, 0);
     }
 
     if (poulpe_selection_active(textedit->selection))
@@ -334,7 +328,7 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
     igGetContentRegionAvail(&content);
     
     textedit->line_start = window->Scroll.y / igGetTextLineHeight();
-    textedit->line_end = ((window->Scroll.y + content.y) / igGetTextLineHeight()) + 1;
+    textedit->line_end = ((window->Scroll.y + content.y) / igGetTextLineHeight()) + 2;
     textedit->line_end = fmin(textedit->line_end, poulpe_textbuffer_text_size(textedit->textview->textbuffer));
     textedit->line_end = fmax(textedit->line_end, 0);
 

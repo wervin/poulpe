@@ -3,42 +3,61 @@
 #include <cimgui.h>
 #include <cimgui_impl.h>
 
+#include <sake/vector.h>
+
 #include "poulpe/editor.h"
 
 #include "demo/ui.h"
 #include "demo/renderer.h"
 #include "demo/window.h"
 #include "demo/log.h"
+#include "demo/error.h"
 
 struct _ui
 {
-    ImGuiContext *imgui_context;
-    ImGuiIO *imgui_io;
+    struct poulpe_editor **editors;
 };
 
 static struct _ui _ui = {0};
 
+static enum demo_error _open_editor(const char *path);
+
+// Create a font init function
+
 enum demo_error demo_ui_init(void)
 {
-    enum demo_error status = DEMO_ERROR_NONE;
+    enum demo_error error = DEMO_ERROR_NONE;
 
-    _ui.imgui_context = igCreateContext(NULL);
-    _ui.imgui_io = igGetIO();
-    _ui.imgui_io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    igCreateContext(NULL);
+    ImGuiIO *io = igGetIO();
+    io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    status = primsa_window_init_ui();
-    if (status != DEMO_ERROR_NONE)
-        return status;
+    error = primsa_window_init_ui();
+    if (error != DEMO_ERROR_NONE)
+        return error;
 
-    status = demo_renderer_init_ui();
-    if (status != DEMO_ERROR_NONE)
-        return status;
+    error = demo_renderer_init_ui();
+    if (error != DEMO_ERROR_NONE)
+        return error;
 
-    if (poulpe_editor_init() != POULPE_ERROR_NONE)
+    _ui.editors = sake_vector_new(sizeof(struct poulpe_editor *), (void (*) (void*)) poulpe_editor_free);
+    if (!_ui.editors)
     {
-        DEMO_LOG_ERROR(DEMO_ERROR_POULPE, "Cannot initialize poulpe editor");
-        return DEMO_ERROR_POULPE;
+        DEMO_LOG_ERROR(DEMO_ERROR_MEMORY, "Cannot allocate editors");
+        return DEMO_ERROR_MEMORY;
     }
+
+    error = _open_editor("../../test1.md");
+    if (error != DEMO_ERROR_NONE)
+        return error;
+
+    error = _open_editor("../../test2.md");
+    if (error != DEMO_ERROR_NONE)
+        return error;
+
+    error = _open_editor("../../README.md");
+    if (error != DEMO_ERROR_NONE)
+        return error;
 
     return DEMO_ERROR_NONE;
 }
@@ -54,15 +73,40 @@ void demo_ui_draw(void)
 
     igShowMetricsWindow(NULL);
 
-    poulpe_editor_draw();
+    for (uint32_t i = 0; i < sake_vector_size(_ui.editors); i++)
+    {
+        const char* filename = poulpe_editor_filename(_ui.editors[i]);
+
+        igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {0.f, 0.f});
+        if (igBegin(filename, NULL, 0))
+            poulpe_editor_draw(_ui.editors[i]);
+        igEnd();
+        igPopStyleVar(1);
+    }
     
     igRender();
 }
 
 void demo_ui_destroy(void)
 {
-    poulpe_editor_destroy();
+    sake_vector_free(_ui.editors);
     demo_renderer_destroy_ui();
     demo_window_destroy_ui();
-    igDestroyContext(_ui.imgui_context);
+    igDestroyContext(igGetCurrentContext());
+}
+
+static enum demo_error _open_editor(const char *path)
+{
+    struct poulpe_editor *editor = poulpe_editor_new(path);
+    if (!editor)
+        return DEMO_ERROR_MEMORY;
+
+    _ui.editors = sake_vector_push_back(_ui.editors, &editor);
+    if (!_ui.editors)
+    {
+        DEMO_LOG_ERROR(DEMO_ERROR_MEMORY, "Cannot push back textview in tabview");
+        return DEMO_ERROR_MEMORY;
+    }
+
+    return DEMO_ERROR_NONE;
 }

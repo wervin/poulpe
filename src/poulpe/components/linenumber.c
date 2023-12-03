@@ -63,12 +63,8 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
     ImDrawList *draw_list = igGetWindowDrawList();
 
     {
-        ImVec2 content;
-        igGetContentRegionAvail(&content);
-        ImVec2 size = {max_line_number_size + 2 * style->FramePadding.x, content.y };
-        ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y + linenumber->textview->textedit->line_start * igGetTextLineHeight()};
-        ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + linenumber->textview->textedit->line_start * igGetTextLineHeight() + size.y};
-        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_background), 0.0f, 0);
+        ImGuiWindow *window = igGetCurrentWindowRead();
+        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_background), 0.0f, 0);
     }
 
     for (uint32_t i = linenumber->textview->textedit->line_start; i < linenumber->textview->textedit->line_end; i++)

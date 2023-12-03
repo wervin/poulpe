@@ -14,7 +14,7 @@
     X(POULPE_COMPONENT_TYPE_SELECTION, 3, selection)   \
     X(POULPE_COMPONENT_TYPE_LINENUMBER, 4, linenumber) \
     X(POULPE_COMPONENT_TYPE_TEXTEDIT, 5, textedit)     \
-    X(POULPE_COMPONENT_TYPE_TABVIEW, 6, tabview)
+    X(POULPE_COMPONENT_TYPE_STATUSBAR, 6, statusbar)
 
 enum poulpe_component_type
 {
@@ -29,22 +29,6 @@ enum poulpe_component_type
 struct poulpe_component
 {
     enum poulpe_component_type type;
-
-    float x;
-    float y;
-    float width;
-    float height;
-    float preferred_width;
-    float preferred_height;
-    bool fill_width;
-    bool fill_height;
-    
-    ImVec2 upper_left;
-    ImVec2 lower_right;
-
-    ImVec4 padding;
-    ImVec4 margin;
-
     struct poulpe_component *parent;
 };
 

@@ -54,19 +54,24 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
-    if (!igBeginChild_Str("Poulpe##textview", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove))
+    ImVec2 content;
+    igGetContentRegionAvail(&content);
+    ImGuiWindow *window = igGetCurrentWindowRead();
+    float statusbar_size = floor(fmax(igGetTextLineHeight() * 1.10f, window->WindowRounding + 1.0f + igGetTextLineHeight() * 0.2f));
+
+    if (!igBeginChild_Str("Poulpe##textview", (ImVec2) {0, content.y - statusbar_size}, true, ImGuiWindowFlags_NoMove))
         goto end_child;
-    
+
     error = poulpe_component_draw((struct poulpe_component *)textview->linenumber);
     if (error != POULPE_ERROR_NONE)
-            goto end_child;
-    
+        return error;
+
     error = poulpe_component_draw((struct poulpe_component *)textview->textedit);
     if (error != POULPE_ERROR_NONE)
-            goto end_child;
+        return error;
 
-end_child:
-    igEndChild();
+    end_child:
+        igEndChild();
 
     return error;
 }

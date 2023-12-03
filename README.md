@@ -4,9 +4,8 @@
 
 + theme management
 + colorize text
-+ print compilation errors
 
-+ select tab / space length
++ Add a status bar below textview with ("Spaces: 4" and "Ln 8, Col 64", "Langage mode")
 
 + double click (select word)
 + triple click (select line)
