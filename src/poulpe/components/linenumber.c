@@ -76,7 +76,7 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
         ImVec2 line_number_size;
         ImFont_CalcTextSizeA(&line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line_number_buffer, NULL, NULL);
 
-        ImU32 color = i == linenumber->textview->textedit->cursor->line_index ? igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_active) : igColorConvertFloat4ToU32(poulpe_theme_dark.line_number);
+        ImU32 color = i == linenumber->textview->textedit->cursor->position.x ? igColorConvertFloat4ToU32(poulpe_theme_dark.line_number_active) : igColorConvertFloat4ToU32(poulpe_theme_dark.line_number);
 
         ImVec2 line_number_start_position = {line_start_position.x + max_line_number_size - line_number_size.x + style->FramePadding.x, line_start_position.y};
         ImDrawList_AddText_Vec2(draw_list,

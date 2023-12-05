@@ -476,13 +476,7 @@ enum demo_error demo_renderer_init_ui(void)
     return DEMO_ERROR_VK;
   }
 
-  ImGuiIO *io = igGetIO();
-
-  ImFont *cousine_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/Cousine-Regular.ttf", 18.0f, NULL, NULL);
-  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/DroidSans.ttf", 18.0f, NULL, NULL);
-  ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/fontawesome-webfont.ttf", 18.0f, NULL, NULL);
-  io->FontDefault = cousine_font;
-
+  /* Create font textures */
   VkCommandBufferAllocateInfo allocInfo = {0};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

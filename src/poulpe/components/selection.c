@@ -43,10 +43,7 @@ enum poulpe_error poulpe_selection_notify(struct poulpe_selection *selection, st
 }
 
 enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
-{
-    if (!igIsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
-        return POULPE_ERROR_NONE;
-    
+{    
     if ( selection->ajusted.end_line_index < selection->textedit->line_start || 
           selection->textedit->line_end < selection->ajusted.start_line_index )
         return POULPE_ERROR_NONE;
@@ -97,7 +94,8 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
             lower_right = (ImVec2) {origin_screen_position.x + text_size, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
 
-        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(poulpe_theme_dark.visual_select_background), 0.0f, 0);
+        ImVec4 color = igIsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? poulpe_theme_dark.hidden_text : poulpe_theme_dark.visual_select_background;
+        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(color), 0.0f, 0);
     }
 
     return POULPE_ERROR_NONE;

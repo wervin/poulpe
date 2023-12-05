@@ -5,6 +5,8 @@
 
 #include "demo/error.h"
 
+typedef struct ImFont ImFont;
+
 enum demo_error demo_renderer_init(void);
 
 enum demo_error demo_renderer_draw(void);

@@ -2,17 +2,22 @@ cmake_minimum_required(VERSION 3.10)
 
 project(poulpe)
 
+include(ExternalProject)
+
 add_subdirectory(externals/cglm)
 add_subdirectory(externals/cimgui)
-add_subdirectory(externals/glslang)
 add_subdirectory(externals/sake)
+# add_subdirectory(externals/tree-sitter-highlight)
 
 set(POULPE_SOURCES
     src/poulpe/components/cursor.c
+    src/poulpe/components/cursorinfo.c
+    src/poulpe/components/indentinfo.c
     src/poulpe/components/linenumber.c
     src/poulpe/components/selection.c
     src/poulpe/components/statusbar.c
     src/poulpe/components/textedit.c
+    src/poulpe/components/textinfo.c
     src/poulpe/components/textview.c
     src/poulpe/component.c
     src/poulpe/editor.c
@@ -28,10 +33,9 @@ add_library(poulpe ${POULPE_SOURCES})
 
 target_link_libraries(poulpe
     m
-    cglm
-    glslang
     sake
-    cimgui_core
+    cglm
+    cimgui
     /usr/lib/x86_64-linux-gnu/libvulkan.so
     /usr/lib/x86_64-linux-gnu/libglfw.so)
 

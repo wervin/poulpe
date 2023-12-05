@@ -11,8 +11,7 @@ struct poulpe_cursor
 {
     struct poulpe_component base;
     struct poulpe_textedit *textedit;
-    uint32_t line_index;
-    uint32_t glyph_index;
+    ImVec2 position;
     struct timeval timer;
 };
 

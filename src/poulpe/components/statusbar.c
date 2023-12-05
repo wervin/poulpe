@@ -1,11 +1,17 @@
 #include <stdlib.h>
+#include <float.h>
 
 #include <cimgui.h>
 
 #include <sake/macro.h>
 
 #include "poulpe/components/statusbar.h"
+#include "poulpe/components/cursorinfo.h"
+#include "poulpe/components/indentinfo.h"
+#include "poulpe/components/textinfo.h"
+#include "poulpe/component.h"
 
+#include "poulpe/editor.h"
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
 
@@ -20,11 +26,30 @@ struct poulpe_statusbar * poulpe_statusbar_new(void)
         return NULL;
     }
 
+    statusbar->cursorinfo = (struct poulpe_cursorinfo *) poulpe_component_new(POULPE_COMPONENT_TYPE_CURSORINFO);
+    if (!statusbar->cursorinfo)
+        return NULL;
+
+    statusbar->indentinfo = (struct poulpe_indentinfo *) poulpe_component_new(POULPE_COMPONENT_TYPE_INDENTINFO);
+    if (!statusbar->indentinfo)
+        return NULL;
+
+    statusbar->textinfo = (struct poulpe_textinfo *) poulpe_component_new(POULPE_COMPONENT_TYPE_TEXTINFO);
+    if (!statusbar->textinfo)
+        return NULL;
+
+    poulpe_cursorinfo_set_statusbar(statusbar->cursorinfo, statusbar);
+    poulpe_indentinfo_set_statusbar(statusbar->indentinfo, statusbar);
+    poulpe_textinfo_set_statusbar(statusbar->textinfo, statusbar);
+
     return statusbar;
 }
 
 void poulpe_statusbar_free(struct poulpe_statusbar *statusbar)
 {
+    poulpe_component_free((struct poulpe_component*) statusbar->cursorinfo);
+    poulpe_component_free((struct poulpe_component*) statusbar->indentinfo);
+    poulpe_component_free((struct poulpe_component*) statusbar->textinfo);
     free(statusbar);
 }
 
@@ -39,18 +64,44 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
-    igPushFont(NULL);
-
-    if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, true, 0))
+    igPushFont(statusbar->editor->small_font);
+    igPushStyleColor_U32(ImGuiCol_Button, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound));
+    igPushStyleColor_U32(ImGuiCol_ButtonHovered, igColorConvertFloat4ToU32(poulpe_theme_dark.cursor_line_background));
+	igPushStyleColor_U32(ImGuiCol_ButtonActive, igColorConvertFloat4ToU32(poulpe_theme_dark.widget_active));
+    if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, true, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
 
-    igButton("Spaces: 4", (ImVec2) {0});
-    igSameLine(0.0f, -1.0f);
-    igButton("Ln 46, Col 23", (ImVec2) {0});
+    ImVec2 content;
+    igGetContentRegionAvail(&content);
+
+    ImDrawList *draw_list = igGetWindowDrawList();
+    ImGuiWindow *window = igGetCurrentWindowRead();
+    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound), 0.0f, 0);
+
+    igSameLine(0.0f, content.y);
+    error = poulpe_component_draw((struct poulpe_component *) statusbar->indentinfo);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    igSameLine(0.0f, content.y);
+    error = poulpe_component_draw((struct poulpe_component *) statusbar->textinfo);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    igSameLine(0.0f, content.y);
+    error = poulpe_component_draw((struct poulpe_component *) statusbar->cursorinfo);
+    if (error != POULPE_ERROR_NONE)
+        return error;
 
 end_child:
     igEndChild();
+    igPopStyleColor(3);
     igPopFont();
 
     return error;
+}
+
+void poulpe_statusbar_set_editor(struct poulpe_statusbar *textview, struct poulpe_editor *editor)
+{
+    textview->editor = editor;
 }

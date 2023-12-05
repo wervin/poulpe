@@ -12,9 +12,8 @@ add_executable(demo ${DEMO_SOURCES})
 target_link_libraries(demo
     m
     cglm
-    glslang
     sake
-    cimgui_core
+    cimgui
     poulpe
     /usr/lib/x86_64-linux-gnu/libvulkan.so
     /usr/lib/x86_64-linux-gnu/libglfw.so)

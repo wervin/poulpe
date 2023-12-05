@@ -59,7 +59,7 @@ enum poulpe_error poulpe_textview_draw(struct poulpe_textview *textview)
     ImGuiWindow *window = igGetCurrentWindowRead();
     float statusbar_size = floor(fmax(igGetTextLineHeight() * 1.10f, window->WindowRounding + 1.0f + igGetTextLineHeight() * 0.2f));
 
-    if (!igBeginChild_Str("Poulpe##textview", (ImVec2) {0, content.y - statusbar_size}, true, ImGuiWindowFlags_NoMove))
+    if (!igBeginChild_Str("Poulpe##textview", (ImVec2) {0, content.y - statusbar_size}, true, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
 
     error = poulpe_component_draw((struct poulpe_component *)textview->linenumber);
@@ -96,4 +96,9 @@ enum poulpe_error poulpe_textview_open_file(struct poulpe_textview *textview, co
         return error;
 
     return POULPE_ERROR_NONE;
+}
+
+void poulpe_textview_set_editor(struct poulpe_textview *textview, struct poulpe_editor *editor)
+{
+    textview->editor = editor;
 }

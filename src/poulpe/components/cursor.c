@@ -45,7 +45,7 @@ enum poulpe_error poulpe_cursor_notify(struct poulpe_cursor *cursor, struct poul
 
 enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
 {
-    if (!igIsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+    if (!igIsWindowFocused(ImGuiFocusedFlags_ChildWindows))
         return POULPE_ERROR_NONE;
     
     struct timeval current_time;
@@ -61,12 +61,12 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
         igGetCursorScreenPos(&origin_screen_position);
         origin_screen_position.x += style->FramePadding.x;
 
-        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textview->textbuffer, cursor->line_index, 0, cursor->glyph_index);
+        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textview->textbuffer, cursor->position.x, 0, cursor->position.y);
         float text_start = origin_screen_position.x + text_size;
         float cursor_width = 1.5f;
 
-        ImVec2 start = {text_start, origin_screen_position.y + cursor->line_index * igGetTextLineHeight()};
-        ImVec2 end = {text_start, origin_screen_position.y + (cursor->line_index + 1) * igGetTextLineHeight()};
+        ImVec2 start = {text_start, origin_screen_position.y + cursor->position.x * igGetTextLineHeight()};
+        ImVec2 end = {text_start, origin_screen_position.y + (cursor->position.x + 1) * igGetTextLineHeight()};
         ImDrawList *draw_list = igGetWindowDrawList();
         ImDrawList_AddLine(draw_list, start, end, igColorConvertFloat4ToU32(poulpe_theme_dark.cursor_normal), cursor_width);
     }
@@ -84,8 +84,8 @@ void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_text
 
 void poulpe_cursor_update(struct poulpe_cursor *cursor)
 {
-    uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->line_index);
-    cursor->glyph_index = cursor->glyph_index > line_length ? line_length : cursor->glyph_index;
+    uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->position.x);
+    cursor->position.y = cursor->position.y > line_length ? line_length : cursor->position.y;
 }
 
 void poulpe_cursor_reset(struct poulpe_cursor *cursor)
@@ -95,35 +95,35 @@ void poulpe_cursor_reset(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_up(struct poulpe_cursor *cursor)
 {
-    if (cursor->line_index > 0)
-        cursor->line_index--;
+    if (cursor->position.x > 0)
+        cursor->position.x--;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor)
 {
-    if (cursor->line_index < (poulpe_textbuffer_text_size(cursor->textedit->textview->textbuffer) - 1))
-        cursor->line_index++;
+    if (cursor->position.x < (poulpe_textbuffer_text_size(cursor->textedit->textview->textbuffer) - 1))
+        cursor->position.x++;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_left(struct poulpe_cursor *cursor)
 {
-    if (cursor->glyph_index > 0)
-        cursor->glyph_index--;
+    if (cursor->position.y > 0)
+        cursor->position.y--;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_right(struct poulpe_cursor *cursor)
 {
-    if (cursor->glyph_index < (poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->line_index)))
-        cursor->glyph_index++;
+    if (cursor->position.y < (poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->position.x)))
+        cursor->position.y++;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_update_position(struct poulpe_cursor *cursor, ImVec2 position)
 {        
-    cursor->line_index = position.x;
-    cursor->glyph_index = position.y;
+    cursor->position.x = position.x;
+    cursor->position.y = position.y;
     poulpe_cursor_reset(cursor);
 }

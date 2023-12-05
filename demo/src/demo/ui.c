@@ -16,13 +16,15 @@
 struct _ui
 {
     struct poulpe_editor **editors;
+    ImFont *icon_font;
+    ImFont *large_font;
+    ImFont *small_font;
+    ImFont *fallback_font;
 };
 
 static struct _ui _ui = {0};
 
 static enum demo_error _open_editor(const char *path);
-
-// Create a font init function
 
 enum demo_error demo_ui_init(void)
 {
@@ -31,6 +33,12 @@ enum demo_error demo_ui_init(void)
     igCreateContext(NULL);
     ImGuiIO *io = igGetIO();
     io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    /* First font registered will be the set as default */
+    _ui.large_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/Cousine-Regular.ttf", 18.0f, NULL, NULL);
+    _ui.small_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/Cousine-Regular.ttf", 11.0f, NULL, NULL);
+    _ui.fallback_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/DroidSans.ttf", 18.0f, NULL, NULL);
+    _ui.icon_font = ImFontAtlas_AddFontFromFileTTF(io->Fonts, "assets/fonts/fontawesome-webfont.ttf", 18.0f, NULL, NULL);
 
     error = primsa_window_init_ui();
     if (error != DEMO_ERROR_NONE)
@@ -100,6 +108,11 @@ static enum demo_error _open_editor(const char *path)
     struct poulpe_editor *editor = poulpe_editor_new(path);
     if (!editor)
         return DEMO_ERROR_MEMORY;
+
+    /* Set editor fonts */
+    editor->icon_font = _ui.icon_font;
+    editor->large_font = _ui.large_font;
+    editor->small_font = _ui.small_font;
 
     _ui.editors = sake_vector_push_back(_ui.editors, &editor);
     if (!_ui.editors)

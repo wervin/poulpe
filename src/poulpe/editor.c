@@ -13,6 +13,8 @@
 
 #include "poulpe/component.h"
 #include "poulpe/components/textview.h"
+#include "poulpe/components/textedit.h"
+#include "poulpe/components/cursor.h"
 #include "poulpe/components/statusbar.h"
 
 struct poulpe_editor* poulpe_editor_new(const char *path)
@@ -37,6 +39,9 @@ struct poulpe_editor* poulpe_editor_new(const char *path)
     if (!editor->statusbar)
         return NULL;
 
+    poulpe_textview_set_editor(editor->textview, editor);
+    poulpe_statusbar_set_editor(editor->statusbar, editor);
+
     return editor;
 }
 
@@ -50,12 +55,14 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
+    igPushFont(editor->large_font);
+
     igPushStyleVar_Vec2(ImGuiStyleVar_WindowMinSize, (ImVec2) {0.f, 0.f});
     igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {0.f, 0.f});
     igPushStyleVar_Vec2(ImGuiStyleVar_ItemSpacing, (ImVec2) {0.f, 0.f});
     igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 0.f);
     
-    if (!igBeginChild_Str("Poulpe##editor", (ImVec2) {0}, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar))
+    if (!igBeginChild_Str("Poulpe##editor", (ImVec2) {0}, false, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
     
     error = poulpe_component_draw((struct poulpe_component *) editor->textview);
@@ -69,6 +76,8 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
 end_child:
     igEndChild();
     igPopStyleVar(4);
+    
+    igPopFont();
 
     return error;
 }
@@ -76,4 +85,9 @@ end_child:
 const char * poulpe_editor_filename(struct poulpe_editor *editor)
 {
     return editor->textview->textbuffer->filename;
+}
+
+const ImVec2 * poulpe_editor_cursor_position(struct poulpe_editor *editor)
+{
+    return &editor->textview->textedit->cursor->position;
 }
