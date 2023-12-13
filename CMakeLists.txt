@@ -7,7 +7,10 @@ include(ExternalProject)
 add_subdirectory(externals/cglm)
 add_subdirectory(externals/cimgui)
 add_subdirectory(externals/sake)
-# add_subdirectory(externals/tree-sitter-highlight)
+add_subdirectory(externals/tree-sitter)
+add_subdirectory(externals/tree-sitter-c)
+add_subdirectory(externals/tree-sitter-glsl)
+add_subdirectory(externals/tree-sitter-json)
 
 set(POULPE_SOURCES
     src/poulpe/components/cursor.c
@@ -36,6 +39,10 @@ target_link_libraries(poulpe
     sake
     cglm
     cimgui
+    tree-sitter
+    tree-sitter-c
+    tree-sitter-glsl
+    tree-sitter-json
     /usr/lib/x86_64-linux-gnu/libvulkan.so
     /usr/lib/x86_64-linux-gnu/libglfw.so)
 

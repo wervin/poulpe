@@ -11,6 +11,7 @@
 
 #include "poulpe/editor.h"
 #include "poulpe/log.h"
+#include "poulpe/text.h"
 
 struct poulpe_cursorinfo * poulpe_cursorinfo_new(void)
 {
@@ -43,9 +44,10 @@ enum poulpe_error poulpe_cursorinfo_draw(struct poulpe_cursorinfo *cursorinfo)
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
-    const ImVec2 *cursor_position = poulpe_editor_cursor_position(cursorinfo->statusbar->editor);
+    ImVec2 cursor_position;
+    poulpe_editor_cursor_position(cursorinfo->statusbar->editor, &cursor_position);
     char buffer[256];
-    snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position->x, (uint32_t) cursor_position->y);
+    snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x, (uint32_t) cursor_position.y);
 
     igButton(buffer, (ImVec2) {0, content.y});
 

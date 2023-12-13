@@ -4,6 +4,7 @@
 
 + theme & font management
 + colorize text
++ gap buffer
 
 + double click (select word)
 + triple click (select line)

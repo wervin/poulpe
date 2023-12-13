@@ -1,9 +1,11 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <float.h>
 
 #include <cimgui.h>
 
 #include <sake/macro.h>
+#include <sake/utils.h>
 
 #include "poulpe/components/cursor.h"
 #include "poulpe/components/textedit.h"
@@ -56,13 +58,17 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
     double elasped = seconds * 1e6 + microseconds;
     if (elasped < CURSOR_BLINK_DELAY)
     {
+        poulpe_text text = cursor->textedit->textview->textbuffer->text;
+        poulpe_line line = text[(uint32_t) cursor->position.x];
+
         ImGuiStyle *style = igGetStyle();
         ImVec2 origin_screen_position;
         igGetCursorScreenPos(&origin_screen_position);
         origin_screen_position.x += style->FramePadding.x;
-
-        float text_size = poulpe_textbuffer_line_subset_textsize(cursor->textedit->textview->textbuffer, cursor->position.x, 0, cursor->position.y);
-        float text_start = origin_screen_position.x + text_size;
+    
+        ImVec2 text_size;
+        ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) cursor->position.y, NULL);
+        float text_start = origin_screen_position.x + text_size.x;
         float cursor_width = 1.5f;
 
         ImVec2 start = {text_start, origin_screen_position.y + cursor->position.x * igGetTextLineHeight()};
@@ -84,8 +90,10 @@ void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_text
 
 void poulpe_cursor_update(struct poulpe_cursor *cursor)
 {
-    uint32_t line_length = poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->position.x);
-    cursor->position.y = cursor->position.y > line_length ? line_length : cursor->position.y;
+    poulpe_text text = cursor->textedit->textview->textbuffer->text;
+    poulpe_line line = text[(uint32_t) cursor->position.x];
+    uint32_t raw_length = poulpe_line_raw_size(line);
+    cursor->position.y = cursor->position.y > raw_length ? raw_length : cursor->position.y;
 }
 
 void poulpe_cursor_reset(struct poulpe_cursor *cursor)
@@ -102,22 +110,31 @@ void poulpe_cursor_move_up(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor)
 {
-    if (cursor->position.x < (poulpe_textbuffer_text_size(cursor->textedit->textview->textbuffer) - 1))
+    poulpe_text text = cursor->textedit->textview->textbuffer->text;
+    if (cursor->position.x < (poulpe_text_size(text) - 1))
         cursor->position.x++;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_left(struct poulpe_cursor *cursor)
 {
+    poulpe_text text = cursor->textedit->textview->textbuffer->text;
+    poulpe_line line = text[(uint32_t) cursor->position.x];
     if (cursor->position.y > 0)
-        cursor->position.y--;
+    {
+        uint32_t utf8_index = poulpe_line_utf8_index(line, cursor->position.y);
+        uint32_t raw_index = poulpe_line_raw_index(line, utf8_index - 1);
+        cursor->position.y -= sake_utils_utf8_length(line[raw_index]);
+    }
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_right(struct poulpe_cursor *cursor)
 {
-    if (cursor->position.y < (poulpe_textbuffer_line_size(cursor->textedit->textview->textbuffer, cursor->position.x)))
-        cursor->position.y++;
+    poulpe_text text = cursor->textedit->textview->textbuffer->text;
+    poulpe_line line = text[(uint32_t) cursor->position.x];
+    if (cursor->position.y < poulpe_line_raw_size(line))
+        cursor->position.y += sake_utils_utf8_length(line[(uint32_t) cursor->position.y]);
     poulpe_cursor_reset(cursor);
 }
 

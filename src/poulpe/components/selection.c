@@ -48,6 +48,8 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
           selection->textedit->line_end < selection->ajusted.start_line_index )
         return POULPE_ERROR_NONE;
 
+    poulpe_text text = selection->textedit->textview->textbuffer->text;
+
     uint32_t start = fmax(selection->ajusted.start_line_index, selection->textedit->line_start);
     uint32_t end = fmin(selection->ajusted.end_line_index, selection->textedit->line_end);
 
@@ -58,6 +60,8 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
 
     for (uint32_t i = start; i <= end; i++)
     {
+        poulpe_line line = text[i];
+
         ImDrawList *draw_list = igGetWindowDrawList();
         ImVec2 space_size;
         ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
@@ -67,31 +71,38 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
 
         if (i == selection->ajusted.start_line_index && i == selection->ajusted.end_line_index)
         {
-            float start_size = poulpe_textbuffer_line_subset_textsize(selection->textedit->textview->textbuffer, i, 0, selection->ajusted.start_glyph_index);
-            float end_size = poulpe_textbuffer_line_subset_textsize(selection->textedit->textview->textbuffer, i, 0, selection->ajusted.end_glyph_index);
-            upper_left = (ImVec2) {origin_screen_position.x + start_size, origin_screen_position.y + i * igGetTextLineHeight()};
-            lower_right = (ImVec2) {origin_screen_position.x + end_size, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
+            ImVec2 start_size;
+            ImFont_CalcTextSizeA(&start_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.start_glyph_index, NULL);
+            ImVec2 end_size;
+            ImFont_CalcTextSizeA(&end_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.end_glyph_index, NULL);
+            upper_left = (ImVec2) {origin_screen_position.x + start_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            lower_right = (ImVec2) {origin_screen_position.x + end_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
         else if (i == selection->ajusted.start_line_index)
         {
-            float full_size = poulpe_textbuffer_line_full_textsize(selection->textedit->textview->textbuffer, i);
-            float subset_size = poulpe_textbuffer_line_subset_textsize(selection->textedit->textview->textbuffer, i, 0, selection->ajusted.start_glyph_index);
-            upper_left = (ImVec2) {origin_screen_position.x + subset_size, origin_screen_position.y + i * igGetTextLineHeight()};
-            lower_right = (ImVec2) {origin_screen_position.x + full_size, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
+            ImVec2 full_size;
+            ImFont_CalcTextSizeA(&full_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
+            full_size.x = fmax(full_size.x, space_size.x);
+            ImVec2 subset_size;
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.start_glyph_index, NULL);
+            upper_left = (ImVec2) {origin_screen_position.x + subset_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            lower_right = (ImVec2) {origin_screen_position.x + full_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
         else if (i == selection->ajusted.end_line_index)
         {
-            float text_size = poulpe_textbuffer_line_subset_textsize(selection->textedit->textview->textbuffer, i, 0, selection->ajusted.end_glyph_index);
-            text_size = fmax(text_size, space_size.x);
+            ImVec2 subset_size;
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.end_glyph_index, NULL);
+            subset_size.x = fmax(subset_size.x, space_size.x);
             upper_left = (ImVec2) {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
-            lower_right = (ImVec2) {origin_screen_position.x + text_size, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
+            lower_right = (ImVec2) {origin_screen_position.x + subset_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
         else
         {
-            float text_size = poulpe_textbuffer_line_full_textsize(selection->textedit->textview->textbuffer, i);
-            text_size = fmax(text_size, space_size.x);
+            ImVec2 text_size;
+            ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
+            text_size.x = fmax(text_size.x, space_size.x);
             upper_left = (ImVec2) {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
-            lower_right = (ImVec2) {origin_screen_position.x + text_size, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
+            lower_right = (ImVec2) {origin_screen_position.x + text_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
 
         ImVec4 color = igIsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? poulpe_theme_dark.hidden_text : poulpe_theme_dark.visual_select_background;
@@ -114,44 +125,39 @@ bool poulpe_selection_active(struct poulpe_selection *selection)
 
 enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection)
 {   
+    poulpe_text text = selection->textedit->textview->textbuffer->text;
+    
     uint32_t i = selection->ajusted.start_line_index;
-    uint32_t line = i;
+    uint32_t j = i;
     while (i <= selection->ajusted.end_line_index)
     {
         if (selection->ajusted.start_line_index == selection->ajusted.end_line_index)
         {
-            for (uint32_t j = selection->ajusted.start_glyph_index; j < selection->ajusted.end_glyph_index; j++)
-                poulpe_textbuffer_line_erase(selection->textedit->textview->textbuffer, line, selection->ajusted.start_glyph_index);
-            line++;
+            poulpe_line_erase_range(text[j], selection->ajusted.start_glyph_index, selection->ajusted.end_glyph_index);
+            j++;
         }
         else if (i == selection->ajusted.start_line_index)
         {
-            uint32_t line_size = poulpe_textbuffer_line_size(selection->textedit->textview->textbuffer, line);
-            for (uint32_t j = selection->ajusted.start_glyph_index; j < line_size; j++)
-                poulpe_textbuffer_line_erase(selection->textedit->textview->textbuffer, line, selection->ajusted.start_glyph_index);
-            line++;
+            uint32_t line_size = poulpe_line_raw_size(text[j]);
+            poulpe_line_erase_range(text[j], selection->ajusted.start_glyph_index, line_size);
+            j++;
         }
         else if (i == selection->ajusted.end_line_index)
         {
-            for (uint32_t j = 0; j < selection->ajusted.end_glyph_index; j++)
-                poulpe_textbuffer_line_erase(selection->textedit->textview->textbuffer, line, 0);
-            line++;
+            poulpe_line_erase_range(text[j], 0, selection->ajusted.end_glyph_index);
+            j++;
         }
         else
         {
-            poulpe_textbuffer_text_erase(selection->textedit->textview->textbuffer, line);
+            poulpe_text_erase(text, j);
         }
         i++;
     }
 
-    if (selection->ajusted.start_line_index < poulpe_textbuffer_text_size(selection->textedit->textview->textbuffer) - 1)
+    if (selection->ajusted.start_line_index < poulpe_text_size(text) - 1)
     {
-        for (uint32_t i = 0; i < poulpe_textbuffer_line_size(selection->textedit->textview->textbuffer, selection->ajusted.start_line_index + 1); i++)
-        {
-            struct poulpe_glyph *glyph = poulpe_textbuffer_line_at(selection->textedit->textview->textbuffer, selection->ajusted.start_line_index + 1, i);
-            poulpe_textbuffer_line_push_back(selection->textedit->textview->textbuffer, selection->ajusted.start_line_index, glyph);
-        }
-        poulpe_textbuffer_text_erase(selection->textedit->textview->textbuffer, selection->ajusted.start_line_index + 1);
+        text[selection->ajusted.start_line_index] = poulpe_line_push_back(text[selection->ajusted.start_line_index], text[selection->ajusted.start_line_index + 1]);
+        poulpe_text_erase(text, selection->ajusted.start_line_index + 1);
     }
 
     return POULPE_ERROR_NONE;
