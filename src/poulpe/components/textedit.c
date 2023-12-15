@@ -5,6 +5,8 @@
 
 #include <cimgui.h>
 
+#include <tree_sitter/api.h>
+
 #include <sake/macro.h>
 #include <sake/utils.h>
 
@@ -19,8 +21,9 @@
 #include "poulpe/io.h"
 
 static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit);
-static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *utf8_coordinates);
+static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position);
 static enum poulpe_error _update_view(struct poulpe_textedit *textedit);
+static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color);
 
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
 static enum poulpe_error _handle_mouse_left_click(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
@@ -137,52 +140,60 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     float maximum_width = 0;
 
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
+
+    poulpe_textbuffer_parse(textbuffer);
+
+    ts_query_cursor_exec(textbuffer->cursor, textbuffer->query, ts_tree_root_node(textbuffer->tree));
+
+    uint32_t cursor_start_bytes = 0;
+    uint32_t cursor_end_bytes = 0;
+    TSPoint cursor_start_point = {0};
+    TSPoint cursor_end_point = {0};
+    TSQueryMatch match = {0};
+    printf("##################################\n");
+    while (ts_query_cursor_next_match(textbuffer->cursor, &match))
+    {   
+        cursor_start_bytes = ts_node_start_byte(match.captures[0].node);
+        cursor_start_point = ts_node_start_point(match.captures[0].node);
+
+        if ((cursor_start_bytes) < (cursor_end_bytes))
+            continue;
+    
+        _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_theme_dark.text));
+
+        cursor_end_bytes = ts_node_end_byte(match.captures[0].node);
+        cursor_end_point = ts_node_end_point(match.captures[0].node);
+
+        uint32_t t;
+        printf("ts_query_string_value_for_id: %s\n", ts_query_capture_name_for_id(textbuffer->query, match.pattern_index, &t));
+
+        _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.keyword));
+    }
+    printf("##################################\n");
+
+    uint32_t last_row = poulpe_text_size(text) - 1;
+    uint32_t last_col = poulpe_line_raw_size(text[last_row]);
+    cursor_start_point = cursor_end_point;
+    cursor_end_point = (TSPoint) { poulpe_text_size(text) - 1, last_col };
+    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.text));
 
     for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
     {
         poulpe_line line = text[i];
 
-        ImVec2 line_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
-        ImVec2 text_start_position = { line_start_position.x, line_start_position.y};
+        ImVec2 text_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
 
         ImVec2 line_size;
         ImFont_CalcTextSizeA(&line_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
         if (line_size.x > maximum_width)
             maximum_width = line_size.x;
 
-        // uint32_t k = 0;
         uint32_t line_raw_size = poulpe_line_raw_size(line);
-        // ImU32 color = poulpe_textbuffer_line_at(textedit->textview->textbuffer, i, 0)->color;
-        ImU32 color = igColorConvertFloat4ToU32(poulpe_theme_dark.text);
-        // char buffer[2 * line_raw_size + 1];
-        // buffer[k] = '\0';
-
         uint32_t j = 0;
         while (j < line_raw_size)
         {
-            // struct poulpe_glyph *g = poulpe_textbuffer_line_at(textedit->textview->textbuffer, i, j);
-
-            // if (g->color != color)
-            // {
-            //     ImVec2 text_size;
-            //     ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, buffer, NULL, NULL);
-
-            //     ImDrawList_AddText_Vec2(draw_list,
-            //                             text_start_position,
-            //                             color,
-            //                             buffer,
-            //                             NULL);
-
-            //     text_start_position.x += text_size.x;
-            //     memset(buffer, 0, k);
-            //     k = 0;
-            //     color = g->color;
-            // }
-
-            // memcpy(buffer + k, (char *) g->utf8, utf8_size);
-            // buffer[k + g->size] = '\0';
-
             if (line[j] == ' ')
             {
                 ImVec2 text_size;
@@ -198,6 +209,24 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
                                             center,
                                             radius,
                                             igColorConvertFloat4ToU32(poulpe_theme_dark.whitespace),
+                                            0);
+            }
+
+            if (line[j] == '\n')
+            {
+                ImVec2 text_size;
+                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + j, NULL);
+                ImVec2 space_size;
+                ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
+
+                float font_size = igGetFontSize();
+                ImVec2 center = {text_start_position.x + text_size.x + 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
+                float radius = 1.5f;
+
+                ImDrawList_AddCircleFilled(draw_list,
+                                            center,
+                                            radius,
+                                            igColorConvertFloat4ToU32(poulpe_theme_dark.flash_color),
                                             0);
             }
 
@@ -226,15 +255,6 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
             }
 
             j += sake_utils_utf8_length(line[j]);
-        }
-
-        if (strlen(line))
-        {
-            ImDrawList_AddText_Vec2(draw_list,
-                                    text_start_position,
-                                    color,
-                                    line,
-                                    NULL);
         }
     }
 
@@ -317,9 +337,10 @@ static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
         window->Scroll.x = text_size.x + space_size.x - content.x;
 }
 
-static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *utf8_coordinates)
+static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position)
 {
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
 
     ImGuiStyle *style = igGetStyle();
 
@@ -333,9 +354,8 @@ static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_posi
         line_index++;
     
     poulpe_line line = text[line_index];
-    uint32_t line_raw_size = poulpe_line_raw_size(line);
+    uint32_t line_raw_size = poulpe_textbuffer_eof_size(textbuffer, line);
     uint32_t raw_glyph_index = 0;
-    uint32_t utf8_glyph_index = 0;
     while (raw_glyph_index < line_raw_size)
     {
         ImVec2 text_size;
@@ -348,15 +368,14 @@ static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_posi
         {
             float diff_text = mouse_position.x - origin_screen_position.x - text_size.x;
             float diff_text_advance = origin_screen_position.x + text_size_advance.x - mouse_position.x;
-            utf8_glyph_index = diff_text < diff_text_advance ? utf8_glyph_index : utf8_glyph_index + 1;
+            raw_glyph_index = diff_text < diff_text_advance ? raw_glyph_index : raw_glyph_index + sake_utils_utf8_length(line[raw_glyph_index]);
             break;
         }
 
         raw_glyph_index += sake_utils_utf8_length(line[raw_glyph_index]);
-        utf8_glyph_index++;
     }
-    utf8_coordinates->x = line_index;
-    utf8_coordinates->y = utf8_glyph_index;
+    position->x = line_index;
+    position->y = raw_glyph_index;
 }
 
 static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
@@ -375,6 +394,59 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
     textedit->scroll_y = window->Scroll.y;
     
     return POULPE_ERROR_NONE;
+}
+
+static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color)
+{   
+    ImGuiStyle *style = igGetStyle();
+
+    ImDrawList *draw_list = igGetWindowDrawList();
+    
+    ImVec2 origin_screen_position;
+    igGetCursorScreenPos(&origin_screen_position);
+    origin_screen_position.x += style->FramePadding.x;
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
+
+    for (uint32_t i = from.row; i <= to.row; i++)
+    {
+        poulpe_line line = text[i];
+
+        ImVec2 space_size;
+        ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
+
+        ImVec2 text_start_position = {0};
+
+        if (i == from.row && i == to.row)
+        {
+            ImVec2 start_size;
+            ImFont_CalcTextSizeA(&start_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + from.column, NULL);
+            text_start_position = (ImVec2){origin_screen_position.x + start_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            ImDrawList_AddText_Vec2(draw_list, text_start_position, color, line + from.column, line + to.column);
+        }
+        else if (i == from.row)
+        {
+            ImVec2 subset_size;
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + from.column, NULL);
+            text_start_position = (ImVec2){origin_screen_position.x + subset_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            ImDrawList_AddText_Vec2(draw_list, text_start_position, color, line + from.column, NULL);
+        }
+        else if (i == to.row)
+        {
+            ImVec2 subset_size;
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + to.column, NULL);
+            text_start_position = (ImVec2){origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            ImDrawList_AddText_Vec2(draw_list, text_start_position, color, line, line + to.column);
+        }
+        else
+        {
+            ImVec2 text_size;
+            ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
+            text_start_position = (ImVec2){origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
+            ImDrawList_AddText_Vec2(draw_list, text_start_position, color, line, NULL);
+        }
+    }
 }
 
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
@@ -620,15 +692,18 @@ static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedi
 {
     SAKE_MACRO_UNUSED(event);
 
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
+    uint32_t line_raw_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index]);
 
-    if (glyph_index < poulpe_line_raw_size(text[line_index]))
+    if (glyph_index < line_raw_size)
         poulpe_line_erase(text[line_index], glyph_index);
     else if (line_index < poulpe_text_size(text) - 1)
     {
-        text[line_index] = poulpe_line_push_back(text[line_index], text[line_index + 1]);
+        uint32_t next_line_raw_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index + 1]);
+        text[line_index] = poulpe_line_insert(text[line_index], line_raw_size, text[line_index + 1], text[line_index + 1] + next_line_raw_size);
         poulpe_text_erase(text, line_index + 1);
     }
         
@@ -639,7 +714,8 @@ static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *text
 {
     SAKE_MACRO_UNUSED(event);
 
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
@@ -652,8 +728,9 @@ static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *text
     }
     else if (line_index != 0)
     {
-        uint32_t previous_size = poulpe_line_raw_size(text[line_index - 1]);
-        text[line_index - 1] = poulpe_line_push_back(text[line_index - 1], text[line_index]);
+        uint32_t previous_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index - 1]);
+        uint32_t current_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index]);
+        text[line_index - 1] = poulpe_line_insert(text[line_index - 1], previous_size, text[line_index], text[line_index] + current_size);
         poulpe_text_erase(text, line_index);
         poulpe_cursor_move_up(textedit->cursor);
         textedit->cursor->position.y = previous_size;
@@ -702,12 +779,15 @@ static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
-    poulpe_line line = poulpe_line_new_range(textbuffer->text[line_index], textbuffer->text[line_index] + glyph_index);
+    poulpe_line line = poulpe_line_new(textbuffer->text[line_index], textbuffer->text[line_index] + glyph_index);
     if (!line)
     {
         POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
         return POULPE_ERROR_MEMORY;
     }
+
+    const char *eof = textbuffer->eof == POULPE_TEXTBUFFER_EOF_LF ? "\n" : "\r\n";
+    poulpe_line_push_back(line, eof, NULL);
 
     poulpe_line_erase_range(textbuffer->text[line_index], 0, glyph_index);
 
@@ -732,7 +812,7 @@ static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, 
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
-    text[line_index] = poulpe_line_insert(text[line_index], glyph_index, "\t");
+    text[line_index] = poulpe_line_insert(text[line_index], glyph_index, "\t", NULL);
     if (!text[line_index])
     {
         POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back glyph");
@@ -752,7 +832,7 @@ static enum poulpe_error _handle_keyboard_default(struct poulpe_textedit *texted
     {
         uint32_t glyph_index = textedit->cursor->position.y;
         uint32_t utf8 = sake_utils_utf8_from_code_point(event->data[i]);
-        text[line_index] = poulpe_line_insert(text[line_index], glyph_index, (const char *) &utf8);
+        text[line_index] = poulpe_line_insert(text[line_index], glyph_index, (const char *) &utf8, NULL);
         if (!text[line_index])
         {
             POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back glyph");

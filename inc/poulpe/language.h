@@ -1,0 +1,4 @@
+#ifndef POULPE_LANGUAGE_H
+#define POULPE_LANGUAGE_H
+
+#endif /* POULPE_LANGUAGE_H */

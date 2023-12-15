@@ -87,12 +87,11 @@ const char * poulpe_editor_filename(struct poulpe_editor *editor)
     return editor->textview->textbuffer->filename;
 }
 
-void poulpe_editor_cursor_position(struct poulpe_editor *editor, ImVec2 *position)
+ImVec2 poulpe_editor_cursor_position(struct poulpe_editor *editor)
 {
     poulpe_text text = editor->textview->textbuffer->text;
     uint32_t line_index = editor->textview->textedit->cursor->position.x;
     poulpe_line line = text[line_index];
     uint32_t glyph_index = poulpe_line_utf8_index(line, editor->textview->textedit->cursor->position.y);
-    position->x = line_index;
-    position->y = glyph_index;
+    return (ImVec2) {line_index, glyph_index};
 }

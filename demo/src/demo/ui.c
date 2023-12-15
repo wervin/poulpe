@@ -59,13 +59,13 @@ enum demo_error demo_ui_init(void)
     if (error != DEMO_ERROR_NONE)
         return error;
 
-    error = _open_editor("../../test2.md");
-    if (error != DEMO_ERROR_NONE)
-        return error;
+    // error = _open_editor("../../test2.md");
+    // if (error != DEMO_ERROR_NONE)
+    //     return error;
 
-    error = _open_editor("../../README.md");
-    if (error != DEMO_ERROR_NONE)
-        return error;
+    // error = _open_editor("../../README.md");
+    // if (error != DEMO_ERROR_NONE)
+    //     return error;
 
     return DEMO_ERROR_NONE;
 }

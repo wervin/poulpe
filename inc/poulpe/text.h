@@ -20,13 +20,12 @@ poulpe_text poulpe_text_insert(poulpe_text text, uint32_t index, poulpe_line *li
 void poulpe_text_pop_back(poulpe_text text);
 void poulpe_text_erase(poulpe_text text, uint32_t index);
 
-poulpe_line poulpe_line_new(const char *string);
-poulpe_line poulpe_line_new_range(const char *begin, const char *end);
+poulpe_line poulpe_line_new(const char *begin, const char *end);
 void poulpe_line_free(poulpe_line line);
 uint32_t poulpe_line_raw_size(poulpe_line line);
 uint32_t poulpe_line_utf8_size(poulpe_line line);
-poulpe_line poulpe_line_push_back(poulpe_line line, const char *data);
-poulpe_line poulpe_line_insert(poulpe_line line, uint32_t index, const char *data);
+poulpe_line poulpe_line_push_back(poulpe_line line, const char *begin, const char *end);
+poulpe_line poulpe_line_insert(poulpe_line line, uint32_t index, const char *begin, const char *end);
 void poulpe_line_pop_back(poulpe_line line);
 void poulpe_line_erase(poulpe_line line, uint32_t index);
 void poulpe_line_erase_range(poulpe_line line, uint32_t from, uint32_t to);

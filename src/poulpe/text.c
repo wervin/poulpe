@@ -46,14 +46,9 @@ void poulpe_text_erase(poulpe_text text, uint32_t index)
     sake_vector_erase(text, index);
 }
 
-poulpe_line poulpe_line_new(const char *string)
+poulpe_line poulpe_line_new(const char *begin, const char *end)
 {
-    return sake_string_new(string);
-}
-
-poulpe_line poulpe_line_new_range(const char *begin, const char *end)
-{
-    return sake_string_new_range(begin, end);
+    return sake_string_new(begin, end);
 }
 
 void poulpe_line_free(poulpe_line line)
@@ -71,14 +66,14 @@ uint32_t poulpe_line_utf8_size(poulpe_line line)
     return sake_string_utf8_size(line);
 }
 
-poulpe_line poulpe_line_push_back(poulpe_line line, const char *data)
+poulpe_line poulpe_line_push_back(poulpe_line line, const char *begin, const char *end)
 {
-    return sake_string_push_back(line, data);
+    return sake_string_push_back(line, begin, end);
 }
 
-poulpe_line poulpe_line_insert(poulpe_line line, uint32_t index, const char *data)
+poulpe_line poulpe_line_insert(poulpe_line line, uint32_t index, const char *begin, const char *end)
 {
-    return sake_string_insert(line, index, data);
+    return sake_string_insert(line, index, begin, end);
 }
 
 void poulpe_line_pop_back(poulpe_line line)

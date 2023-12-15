@@ -44,8 +44,7 @@ enum poulpe_error poulpe_cursorinfo_draw(struct poulpe_cursorinfo *cursorinfo)
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
-    ImVec2 cursor_position;
-    poulpe_editor_cursor_position(cursorinfo->statusbar->editor, &cursor_position);
+    ImVec2 cursor_position = poulpe_editor_cursor_position(cursorinfo->statusbar->editor);
     char buffer[256];
     snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x, (uint32_t) cursor_position.y);
 
