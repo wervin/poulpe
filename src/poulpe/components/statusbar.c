@@ -7,6 +7,7 @@
 
 #include "poulpe/components/statusbar.h"
 #include "poulpe/components/cursorinfo.h"
+#include "poulpe/components/eofinfo.h"
 #include "poulpe/components/indentinfo.h"
 #include "poulpe/components/textinfo.h"
 #include "poulpe/component.h"
@@ -38,9 +39,14 @@ struct poulpe_statusbar * poulpe_statusbar_new(void)
     if (!statusbar->textinfo)
         return NULL;
 
+    statusbar->eofinfo = (struct poulpe_eofinfo *) poulpe_component_new(POULPE_COMPONENT_TYPE_EOFINFO);
+    if (!statusbar->textinfo)
+        return NULL;
+
     poulpe_cursorinfo_set_statusbar(statusbar->cursorinfo, statusbar);
     poulpe_indentinfo_set_statusbar(statusbar->indentinfo, statusbar);
     poulpe_textinfo_set_statusbar(statusbar->textinfo, statusbar);
+    poulpe_eofinfo_set_statusbar(statusbar->eofinfo, statusbar);
 
     return statusbar;
 }
@@ -50,6 +56,7 @@ void poulpe_statusbar_free(struct poulpe_statusbar *statusbar)
     poulpe_component_free((struct poulpe_component*) statusbar->cursorinfo);
     poulpe_component_free((struct poulpe_component*) statusbar->indentinfo);
     poulpe_component_free((struct poulpe_component*) statusbar->textinfo);
+    poulpe_component_free((struct poulpe_component*) statusbar->eofinfo);
     free(statusbar);
 }
 
@@ -85,6 +92,11 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 
     igSameLine(0.0f, content.y);
     error = poulpe_component_draw((struct poulpe_component *) statusbar->textinfo);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    igSameLine(0.0f, content.y);
+    error = poulpe_component_draw((struct poulpe_component *) statusbar->eofinfo);
     if (error != POULPE_ERROR_NONE)
         return error;
 

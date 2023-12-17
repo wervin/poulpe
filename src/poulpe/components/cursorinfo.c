@@ -46,7 +46,7 @@ enum poulpe_error poulpe_cursorinfo_draw(struct poulpe_cursorinfo *cursorinfo)
 
     ImVec2 cursor_position = poulpe_editor_cursor_position(cursorinfo->statusbar->editor);
     char buffer[256];
-    snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x, (uint32_t) cursor_position.y);
+    snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x + 1, (uint32_t) cursor_position.y + 1);
 
     igButton(buffer, (ImVec2) {0, content.y});
 

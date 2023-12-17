@@ -15,6 +15,7 @@ add_subdirectory(externals/tree-sitter-json)
 set(POULPE_SOURCES
     src/poulpe/components/cursor.c
     src/poulpe/components/cursorinfo.c
+    src/poulpe/components/eofinfo.c
     src/poulpe/components/indentinfo.c
     src/poulpe/components/linenumber.c
     src/poulpe/components/selection.c

@@ -7,8 +7,6 @@
 
 + optimize parsing
 
-+ eof info button
-
 + handle CRLF
 
 + double click (select word)
