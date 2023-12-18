@@ -74,7 +74,7 @@ enum poulpe_error poulpe_cursor_draw(struct poulpe_cursor *cursor)
         ImVec2 start = {text_start, origin_screen_position.y + cursor->position.x * igGetTextLineHeight()};
         ImVec2 end = {text_start, origin_screen_position.y + (cursor->position.x + 1) * igGetTextLineHeight()};
         ImDrawList *draw_list = igGetWindowDrawList();
-        ImDrawList_AddLine(draw_list, start, end, igColorConvertFloat4ToU32(poulpe_theme_dark.cursor_normal), cursor_width);
+        ImDrawList_AddLine(draw_list, start, end, igColorConvertFloat4ToU32(poulpe_theme_dark.secondary_text), cursor_width);
     }
 
     if (elasped > CURSOR_BLINK_DELAY * 2)

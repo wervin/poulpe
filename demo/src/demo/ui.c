@@ -55,13 +55,13 @@ enum demo_error demo_ui_init(void)
         return DEMO_ERROR_MEMORY;
     }
 
-    error = _open_editor("../../test1.md");
-    if (error != DEMO_ERROR_NONE)
-        return error;
-
-    // error = _open_editor("../../test2.md");
+    // error = _open_editor("../../test.json");
     // if (error != DEMO_ERROR_NONE)
     //     return error;
+
+    error = _open_editor("../../test.frag");
+    if (error != DEMO_ERROR_NONE)
+        return error;
 
     // error = _open_editor("../../README.md");
     // if (error != DEMO_ERROR_NONE)

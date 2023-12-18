@@ -12,8 +12,7 @@
 #include "poulpe/log.h"
 #include "poulpe/theme.h"
 #include "poulpe/text.h"
-
-extern const TSLanguage *tree_sitter_json(void);
+#include "poulpe/language.h"
 
 static const char * _read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
 static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer);
@@ -116,7 +115,11 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
         return POULPE_ERROR_MEMORY;
     }
 
-    _init_parser(textbuffer);
+    textbuffer->language_type = poulpe_language_auto_detect(textbuffer->filename);
+
+    enum poulpe_error error = _init_parser(textbuffer);
+    if (error != POULPE_ERROR_NONE)
+        return error;
 
     return POULPE_ERROR_NONE;
 }
@@ -174,18 +177,15 @@ static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer)
 {
     textbuffer->parser = ts_parser_new();
 
-    ts_parser_set_language(textbuffer->parser, tree_sitter_json());
+    ts_parser_set_language(textbuffer->parser, poulpe_language_parser(textbuffer->language_type));
 
-    const char highlight_query[] = 
-    "(pair key: (_) @string.special.key) "
-    "(string) @string "
-    "(number) @number "
-    "[(null) (true) (false)] @constant.builtin "
-    "(escape_sequence) @escape "
-    "(comment) @comment";
+    const char *highlight_query = poulpe_language_query(textbuffer->language_type);
+    if (!highlight_query)
+        return POULPE_ERROR_NONE;
+
     TSQueryError query_error;
     uint32_t error_offset = 0;
-    textbuffer->query = ts_query_new(tree_sitter_json(), highlight_query, strlen(highlight_query), &error_offset, &query_error);
+    textbuffer->query = ts_query_new(poulpe_language_parser(textbuffer->language_type), highlight_query, strlen(highlight_query), &error_offset, &query_error);
     if (query_error != TSQueryErrorNone)
     {
         POULPE_LOG_ERROR(POULPE_ERROR_VALUE, "Query error");

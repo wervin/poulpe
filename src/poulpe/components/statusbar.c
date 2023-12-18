@@ -72,10 +72,7 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     igPushFont(statusbar->editor->small_font);
-    igPushStyleColor_U32(ImGuiCol_Button, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound));
-    igPushStyleColor_U32(ImGuiCol_ButtonHovered, igColorConvertFloat4ToU32(poulpe_theme_dark.cursor_line_background));
-	igPushStyleColor_U32(ImGuiCol_ButtonActive, igColorConvertFloat4ToU32(poulpe_theme_dark.widget_active));
-    if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, true, ImGuiWindowFlags_NoScrollbar))
+    if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, false, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
 
     ImVec2 content;
@@ -83,7 +80,7 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 
     ImDrawList *draw_list = igGetWindowDrawList();
     ImGuiWindow *window = igGetCurrentWindowRead();
-    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound), 0.0f, 0);
+    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.main_background), 0.0f, 0);
 
     igSameLine(0.0f, content.y);
     error = poulpe_component_draw((struct poulpe_component *) statusbar->indentinfo);
@@ -107,7 +104,6 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 
 end_child:
     igEndChild();
-    igPopStyleColor(3);
     igPopFont();
 
     return error;

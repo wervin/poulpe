@@ -61,6 +61,17 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
     igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {0.f, 0.f});
     igPushStyleVar_Vec2(ImGuiStyleVar_ItemSpacing, (ImVec2) {0.f, 0.f});
     igPushStyleVar_Float(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+    igPushStyleColor_U32(ImGuiCol_Text, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+    igPushStyleColor_U32(ImGuiCol_ChildBg, igColorConvertFloat4ToU32(poulpe_theme_dark.border));
+    igPushStyleColor_U32(ImGuiCol_Border, igColorConvertFloat4ToU32(poulpe_theme_dark.border));
+    igPushStyleColor_U32(ImGuiCol_Button, igColorConvertFloat4ToU32(poulpe_theme_dark.main_background));
+    igPushStyleColor_U32(ImGuiCol_ButtonHovered, igColorConvertFloat4ToU32(poulpe_theme_dark.hovered_border));
+	igPushStyleColor_U32(ImGuiCol_ButtonActive, igColorConvertFloat4ToU32(poulpe_theme_dark.active_border));
+    igPushStyleColor_U32(ImGuiCol_ScrollbarBg, igColorConvertFloat4ToU32(poulpe_theme_dark.secondary_background));
+    igPushStyleColor_U32(ImGuiCol_ScrollbarGrab, igColorConvertFloat4ToU32(poulpe_theme_dark.widget));
+	igPushStyleColor_U32(ImGuiCol_ScrollbarGrabHovered, igColorConvertFloat4ToU32(poulpe_theme_dark.hovered_widget));
+    igPushStyleColor_U32(ImGuiCol_ScrollbarGrabActive, igColorConvertFloat4ToU32(poulpe_theme_dark.active_widget));
     
     if (!igBeginChild_Str("Poulpe##editor", (ImVec2) {0}, false, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
@@ -75,8 +86,11 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
     
 end_child:
     igEndChild();
+
     igPopStyleVar(4);
-    
+
+    igPopStyleColor(10);
+
     igPopFont();
 
     return error;

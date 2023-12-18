@@ -23,6 +23,9 @@
 static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit);
 static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position);
 static enum poulpe_error _update_view(struct poulpe_textedit *textedit);
+
+static void _draw_highlighted_tree(struct poulpe_textedit *textedit);
+static void _draw_raw_tree(struct poulpe_textedit *textedit);
 static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color);
 
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
@@ -124,7 +127,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     {
         ImGuiWindow *window = igGetCurrentWindowRead();
-        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.backgound), 0.0f, 0);
+        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.main_background), 0.0f, 0);
     }
 
     if (poulpe_selection_active(textedit->selection))
@@ -145,39 +148,10 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     poulpe_textbuffer_parse(textbuffer);
 
-    ts_query_cursor_exec(textbuffer->cursor, textbuffer->query, ts_tree_root_node(textbuffer->tree));
-
-    uint32_t cursor_start_bytes = 0;
-    uint32_t cursor_end_bytes = 0;
-    TSPoint cursor_start_point = {0};
-    TSPoint cursor_end_point = {0};
-    TSQueryMatch match = {0};
-    printf("##################################\n");
-    while (ts_query_cursor_next_match(textbuffer->cursor, &match))
-    {   
-        cursor_start_bytes = ts_node_start_byte(match.captures[0].node);
-        cursor_start_point = ts_node_start_point(match.captures[0].node);
-
-        if ((cursor_start_bytes) < (cursor_end_bytes))
-            continue;
-    
-        _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_theme_dark.text));
-
-        cursor_end_bytes = ts_node_end_byte(match.captures[0].node);
-        cursor_end_point = ts_node_end_point(match.captures[0].node);
-
-        uint32_t t;
-        printf("ts_query_string_value_for_id: %s\n", ts_query_capture_name_for_id(textbuffer->query, match.pattern_index, &t));
-
-        _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.keyword));
-    }
-    printf("##################################\n");
-
-    uint32_t last_row = poulpe_text_size(text) - 1;
-    uint32_t last_col = poulpe_line_raw_size(text[last_row]);
-    cursor_start_point = cursor_end_point;
-    cursor_end_point = (TSPoint) { poulpe_text_size(text) - 1, last_col };
-    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.text));
+    if (textbuffer->query)
+        _draw_highlighted_tree(textedit);
+    else
+        _draw_raw_tree(textedit);
 
     for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
     {
@@ -203,30 +177,12 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
                 float font_size = igGetFontSize();
                 ImVec2 center = {text_start_position.x + text_size.x - 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
-                float radius = 1.5f;
+                float radius = 1.25f;
 
                 ImDrawList_AddCircleFilled(draw_list,
                                             center,
                                             radius,
-                                            igColorConvertFloat4ToU32(poulpe_theme_dark.whitespace),
-                                            0);
-            }
-
-            if (line[j] == '\n')
-            {
-                ImVec2 text_size;
-                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + j, NULL);
-                ImVec2 space_size;
-                ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
-
-                float font_size = igGetFontSize();
-                ImVec2 center = {text_start_position.x + text_size.x + 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
-                float radius = 1.5f;
-
-                ImDrawList_AddCircleFilled(draw_list,
-                                            center,
-                                            radius,
-                                            igColorConvertFloat4ToU32(poulpe_theme_dark.flash_color),
+                                            igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text),
                                             0);
             }
 
@@ -244,14 +200,14 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
                 ImDrawList_AddLine(draw_list,
                                     (ImVec2) { center.x - 0.5 * tab_size.x, center.y - thickness},
                                     (ImVec2) { center.x - 0.25 * tab_size.x, center.y - thickness},
-                                    igColorConvertFloat4ToU32(poulpe_theme_dark.whitespace),
+                                    igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text),
                                     thickness);
 
                 ImDrawList_AddTriangleFilled(draw_list,
                                                 (ImVec2) { center.x - 0.25 * tab_size.x, center.y - 0.15 * font_size},
                                                 (ImVec2) { center.x - 0.25 * tab_size.x + 0.15 * font_size, center.y},
                                                 (ImVec2) { center.x - 0.25 * tab_size.x, center.y + 0.15 * font_size },
-                                                igColorConvertFloat4ToU32(poulpe_theme_dark.whitespace));
+                                                igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text));
             }
 
             j += sake_utils_utf8_length(line[j]);
@@ -394,6 +350,53 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
     textedit->scroll_y = window->Scroll.y;
     
     return POULPE_ERROR_NONE;
+}
+
+static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
+{
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
+
+    ts_query_cursor_exec(textbuffer->cursor, textbuffer->query, ts_tree_root_node(textbuffer->tree));
+    
+    uint32_t cursor_start_bytes = 0;
+    uint32_t cursor_end_bytes = 0;
+    TSPoint cursor_start_point = {0};
+    TSPoint cursor_end_point = {0};
+    TSQueryMatch match = {0};
+
+    while (ts_query_cursor_next_match(textbuffer->cursor, &match))
+    {   
+        cursor_start_bytes = ts_node_start_byte(match.captures[0].node);
+        cursor_start_point = ts_node_start_point(match.captures[0].node);
+
+        if ((cursor_start_bytes) < (cursor_end_bytes))
+            continue;
+    
+        _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+
+        cursor_end_bytes = ts_node_end_byte(match.captures[0].node);
+        cursor_end_point = ts_node_end_point(match.captures[0].node);
+
+        uint32_t t;
+        const char *pattern = ts_query_capture_name_for_id(textbuffer->query, match.captures[0].index, &t);
+        ImU32 color = poulpe_language_pattern_color(textbuffer->language_type, pattern);
+        _draw_lines(textedit, cursor_start_point, cursor_end_point, color);
+    }
+
+    uint32_t last_row = poulpe_text_size(text) - 1;
+    uint32_t last_col = poulpe_line_raw_size(text[last_row]);
+    cursor_start_point = cursor_end_point;
+    cursor_end_point = (TSPoint) { poulpe_text_size(text) - 1, last_col };
+    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+}
+
+static void _draw_raw_tree(struct poulpe_textedit *textedit)
+{
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    TSPoint cursor_start_point = ts_node_start_point(ts_tree_root_node(textbuffer->tree));
+    TSPoint cursor_end_point = ts_node_end_point(ts_tree_root_node(textbuffer->tree));
+    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
 }
 
 static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color)

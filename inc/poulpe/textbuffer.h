@@ -8,6 +8,7 @@
 
 #include "poulpe/text.h"
 #include "poulpe/error.h"
+#include "poulpe/language.h"
 
 typedef struct TSParser TSParser;
 typedef struct TSTree TSTree;
@@ -24,6 +25,7 @@ struct poulpe_textbuffer
     poulpe_text text;
     sake_string filename;
     sake_string path;
+    enum poulpe_language_type language_type;
     bool dirty;
     enum poulpe_textbuffer_eof eof;
     TSParser *parser;
