@@ -146,8 +146,6 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     poulpe_text text = textbuffer->text;
 
-    poulpe_textbuffer_parse(textbuffer);
-
     if (textbuffer->query)
         _draw_highlighted_tree(textedit);
     else
@@ -364,15 +362,13 @@ static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
     TSPoint cursor_start_point = {0};
     TSPoint cursor_end_point = {0};
     TSQueryMatch match = {0};
-
     while (ts_query_cursor_next_match(textbuffer->cursor, &match))
     {   
-        cursor_start_bytes = ts_node_start_byte(match.captures[0].node);
         cursor_start_point = ts_node_start_point(match.captures[0].node);
-
-        if ((cursor_start_bytes) < (cursor_end_bytes))
+        cursor_start_bytes = ts_node_start_byte(match.captures[0].node);
+        if (cursor_start_bytes < cursor_end_bytes)
             continue;
-    
+
         _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
 
         cursor_end_bytes = ts_node_end_byte(match.captures[0].node);
@@ -404,6 +400,9 @@ static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint 
     ImGuiStyle *style = igGetStyle();
 
     ImDrawList *draw_list = igGetWindowDrawList();
+    
+    if (!(to.row >= textedit->line_start && from.row <= textedit->line_end))
+        return;
     
     ImVec2 origin_screen_position;
     igGetCursorScreenPos(&origin_screen_position);
@@ -509,6 +508,8 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
     if (event->delete)
     {
         if (poulpe_selection_active(textedit->selection))
@@ -527,6 +528,9 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
             if (error != POULPE_ERROR_NONE)
                 return error;
         }
+
+        poulpe_textbuffer_tree_edit(textbuffer);
+
         poulpe_cursor_update(textedit->cursor);
         _ensure_cursor_visiblity(textedit);
     }
@@ -549,6 +553,9 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
             if (error != POULPE_ERROR_NONE)
                 return error;
         }
+
+        poulpe_textbuffer_tree_edit(textbuffer);
+        
         poulpe_cursor_update(textedit->cursor);
         _ensure_cursor_visiblity(textedit);
     }
@@ -642,6 +649,8 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         if (error != POULPE_ERROR_NONE)
             return error;
 
+        poulpe_textbuffer_tree_edit(textbuffer);
+        
         poulpe_cursor_update(textedit->cursor);
         _ensure_cursor_visiblity(textedit);
     }
@@ -663,6 +672,8 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         if (error != POULPE_ERROR_NONE)
             return error;
 
+        poulpe_textbuffer_tree_edit(textbuffer);
+
         poulpe_cursor_update(textedit->cursor);
         _ensure_cursor_visiblity(textedit);
     }
@@ -683,6 +694,8 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         error = _handle_keyboard_default(textedit, event);
         if (error != POULPE_ERROR_NONE)
             return error;
+        
+        poulpe_textbuffer_tree_edit(textbuffer);
 
         poulpe_cursor_update(textedit->cursor);
         _ensure_cursor_visiblity(textedit);

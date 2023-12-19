@@ -55,17 +55,17 @@ enum demo_error demo_ui_init(void)
         return DEMO_ERROR_MEMORY;
     }
 
-    // error = _open_editor("../../test.json");
-    // if (error != DEMO_ERROR_NONE)
-    //     return error;
-
-    error = _open_editor("../../test.frag");
+    error = _open_editor("tests/test.json");
     if (error != DEMO_ERROR_NONE)
         return error;
 
-    // error = _open_editor("../../README.md");
-    // if (error != DEMO_ERROR_NONE)
-    //     return error;
+    error = _open_editor("tests/test.frag");
+    if (error != DEMO_ERROR_NONE)
+        return error;
+
+    error = _open_editor("tests/test.c");
+    if (error != DEMO_ERROR_NONE)
+        return error;
 
     return DEMO_ERROR_NONE;
 }

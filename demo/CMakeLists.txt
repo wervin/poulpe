@@ -38,4 +38,11 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/demo/assets
             ${CMAKE_BINARY_DIR}/demo/assets
+)
+
+add_custom_command(
+    TARGET demo POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/demo/tests
+            ${CMAKE_BINARY_DIR}/demo/tests
 )           

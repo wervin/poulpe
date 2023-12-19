@@ -121,6 +121,8 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
     if (error != POULPE_ERROR_NONE)
         return error;
 
+    poulpe_textbuffer_tree_parse(textbuffer);
+
     return POULPE_ERROR_NONE;
 }
 
@@ -143,17 +145,37 @@ void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer)
     free(textbuffer);
 }
 
-void poulpe_textbuffer_parse(struct poulpe_textbuffer *textbuffer)
+void poulpe_textbuffer_tree_parse(struct poulpe_textbuffer *textbuffer)
 {
-    ts_parser_reset(textbuffer->parser);
-    
     TSInput input = {
         .encoding = TSInputEncodingUTF8,
         .payload = textbuffer,
         .read = _read
     };
 
-    textbuffer->tree = ts_parser_parse(textbuffer->parser, NULL, input);
+    textbuffer->tree = ts_parser_parse(textbuffer->parser, textbuffer->tree, input);
+}
+
+void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
+{
+    if (textbuffer->tree)
+    {   
+        uint32_t start_byte = ts_node_start_byte(ts_tree_root_node(textbuffer->tree));
+        uint32_t end_byte = ts_node_end_byte(ts_tree_root_node(textbuffer->tree));
+        TSPoint start_point = ts_node_start_point(ts_tree_root_node(textbuffer->tree));
+        TSPoint end_point = ts_node_end_point(ts_tree_root_node(textbuffer->tree));
+        TSInputEdit input_edit = {
+            .start_byte = start_byte,
+            .old_end_byte = end_byte,
+            .new_end_byte = end_byte,
+            .start_point = start_point,
+            .old_end_point = end_point,
+            .new_end_point = end_point
+        };
+        ts_tree_edit(textbuffer->tree, &input_edit);
+    }
+
+    poulpe_textbuffer_tree_parse(textbuffer);
 }
 
 uint32_t poulpe_textbuffer_eof_size(struct poulpe_textbuffer * textbuffer, poulpe_line line)

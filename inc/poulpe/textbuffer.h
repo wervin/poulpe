@@ -37,7 +37,8 @@ struct poulpe_textbuffer
 struct poulpe_textbuffer * poulpe_textbuffer_new(void);
 void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer);
 enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuffer, const char *path);
-void poulpe_textbuffer_parse(struct poulpe_textbuffer *textbuffer);
+void poulpe_textbuffer_tree_parse(struct poulpe_textbuffer *textbuffer);
+void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer);
 uint32_t poulpe_textbuffer_eof_size(struct poulpe_textbuffer * textbuffer, poulpe_line line);
 
 #endif /* POULPE_TEXTBUFFER_H */
