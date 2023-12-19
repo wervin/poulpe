@@ -12,7 +12,7 @@
 #include "poulpe/components/textview.h"
 
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 #include "poulpe/textbuffer.h"
 
 static void _update_linenumber(struct poulpe_linenumber *poulpe_linenumber);
@@ -64,7 +64,7 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
 
     {
         ImGuiWindow *window = igGetCurrentWindowRead();
-        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.secondary_background), 0.0f, 0);
+        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_style.theme->secondary_background), 0.0f, 0);
     }
 
     for (uint32_t i = linenumber->textview->textedit->line_start; i < linenumber->textview->textedit->line_end; i++)
@@ -76,7 +76,7 @@ enum poulpe_error poulpe_linenumber_draw(struct poulpe_linenumber *linenumber)
         ImVec2 line_number_size;
         ImFont_CalcTextSizeA(&line_number_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line_number_buffer, NULL, NULL);
 
-        ImU32 color = i == linenumber->textview->textedit->cursor->position.x ? igColorConvertFloat4ToU32(poulpe_theme_dark.secondary_text) : igColorConvertFloat4ToU32(poulpe_theme_dark.muted_text);
+        ImU32 color = i == linenumber->textview->textedit->cursor->position.x ? igColorConvertFloat4ToU32(poulpe_style.theme->secondary_text) : igColorConvertFloat4ToU32(poulpe_style.theme->muted_text);
 
         ImVec2 line_number_start_position = {line_start_position.x + max_line_number_size - line_number_size.x + style->FramePadding.x, line_start_position.y};
         ImDrawList_AddText_Vec2(draw_list,

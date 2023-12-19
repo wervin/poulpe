@@ -3,6 +3,21 @@
 
 #include <cimgui.h>
 
+
+#define POULPE_THEMES \
+    X(POULPE_THEME_DARK, 0, dark) \
+    X(POULPE_THEME_LIGHT, 1, light)
+
+enum poulpe_theme_type
+{
+#define X(__def, __id, __type) \
+    __def = __id,
+
+    POULPE_THEMES
+
+#undef X
+};
+
 struct poulpe_theme
 {
     ImVec4 main_background;
@@ -34,8 +49,5 @@ struct poulpe_theme
     ImVec4 number;
     ImVec4 feature;
 };
-
-extern const struct poulpe_theme poulpe_theme_light;
-extern const struct poulpe_theme poulpe_theme_dark;
 
 #endif /* POULPE_THEME_H */

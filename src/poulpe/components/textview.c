@@ -15,7 +15,7 @@
 
 #include "poulpe/textbuffer.h"
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 
 struct poulpe_textview * poulpe_textview_new(void)
 {

@@ -6,7 +6,7 @@
 
 #include <cimgui.h>
 
-#include <poulpe/theme.h>
+#include <poulpe/style.h>
 
 #define POULPE_C_PATTERN                                                                  \
   X(POULPE_C_PATTERN_KEYWORD, 1, keyword, "keyword",                                      \
@@ -104,7 +104,7 @@ static inline ImU32 poulpe_c_pattern_color(const char *pattern)
 {
 #define X(__def, __id, __color, __key, __query)                  \
   if (strcmp(pattern, __key) == 0)                               \
-    return igColorConvertFloat4ToU32(poulpe_theme_dark.__color);
+    return igColorConvertFloat4ToU32(poulpe_style.theme->__color);
 
   POULPE_C_PATTERN
 

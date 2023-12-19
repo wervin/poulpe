@@ -6,7 +6,7 @@
 
 #include <cimgui.h>
 
-#include <poulpe/theme.h>
+#include <poulpe/style.h>
 
 #include <poulpe/languages/c.h>
 
@@ -41,7 +41,7 @@ static inline ImU32 poulpe_glsl_pattern_color(const char *pattern)
 {
 #define X(__def, __id, __color, __key, __query)                  \
   if (strcmp(pattern, __key) == 0)                               \
-    return igColorConvertFloat4ToU32(poulpe_theme_dark.__color);
+    return igColorConvertFloat4ToU32(poulpe_style.theme->__color);
 
   POULPE_GLSL_PATTERN
 

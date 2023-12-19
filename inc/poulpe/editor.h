@@ -12,10 +12,6 @@ struct poulpe_editor
 {    
     struct poulpe_textview *textview;
     struct poulpe_statusbar *statusbar;
-
-    ImFont *icon_font;
-    ImFont *large_font;
-    ImFont *small_font;
 };
 
 struct poulpe_editor* poulpe_editor_new(const char *path);

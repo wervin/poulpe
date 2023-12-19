@@ -11,7 +11,7 @@
 #include "poulpe/components/textview.h"
 
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 #include "poulpe/textbuffer.h"
 
 static void _update_selection(struct poulpe_selection *selection);
@@ -105,7 +105,7 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
             lower_right = (ImVec2) {origin_screen_position.x + text_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
 
-        ImVec4 color = igIsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? poulpe_theme_dark.highlighted_text : poulpe_theme_dark.dimmed_text;
+        ImVec4 color = igIsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? poulpe_style.theme->highlighted_text : poulpe_style.theme->dimmed_text;
         ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(color), 0.0f, 0);
     }
 

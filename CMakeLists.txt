@@ -29,6 +29,7 @@ set(POULPE_SOURCES
     src/poulpe/io.c
     src/poulpe/language.c
     src/poulpe/log.c
+    src/poulpe/style.c
     src/poulpe/text.c
     src/poulpe/textbuffer.c
     src/poulpe/theme.c

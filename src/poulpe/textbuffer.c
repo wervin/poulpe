@@ -10,7 +10,7 @@
 
 #include "poulpe/textbuffer.h"
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 #include "poulpe/text.h"
 #include "poulpe/language.h"
 

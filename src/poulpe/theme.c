@@ -1,4 +1,4 @@
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 
 #define BLACK           0.0, 0.0, 0.0, 1.0
 

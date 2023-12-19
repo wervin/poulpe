@@ -5,7 +5,7 @@
 
 #include <cimgui.h>
 
-#include <poulpe/theme.h>
+#include <poulpe/style.h>
 
 #define POULPE_JSON_PATTERN                                                   \
   X(POULPE_JSON_PATTERN_STRING_SPECIAL_KEY, 1, keyword, "string.special.key", \
@@ -37,7 +37,7 @@ static inline ImU32 poulpe_json_pattern_color(const char *pattern)
 {
 #define X(__def, __id, __color, __key, __query) \
   if (strcmp(pattern, __key) == 0)              \
-    return igColorConvertFloat4ToU32(poulpe_theme_dark.__color);
+    return igColorConvertFloat4ToU32(poulpe_style.theme->__color);
 
   POULPE_JSON_PATTERN
 

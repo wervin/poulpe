@@ -476,37 +476,6 @@ enum demo_error demo_renderer_init_ui(void)
     return DEMO_ERROR_VK;
   }
 
-  /* Create font textures */
-  VkCommandBufferAllocateInfo allocInfo = {0};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = _backend.ui.vk_commandpool;
-  allocInfo.commandBufferCount = 1;
-
-  VkCommandBuffer commandbuffer;
-  vkAllocateCommandBuffers(_backend.device.vk_device, &allocInfo, &commandbuffer);
-
-  VkCommandBufferBeginInfo beginInfo = {0};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkBeginCommandBuffer(commandbuffer, &beginInfo);
-
-  ImGui_ImplVulkan_CreateFontsTexture(commandbuffer);
-
-  vkEndCommandBuffer(commandbuffer);
-
-  VkSubmitInfo submitInfo = {0};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandbuffer;
-
-  vkQueueSubmit(_backend.device.vk_graphic_queue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(_backend.device.vk_graphic_queue);
-  vkFreeCommandBuffers(_backend.device.vk_device, _backend.ui.vk_commandpool, 1, &commandbuffer);
-
-  ImGui_ImplVulkan_DestroyFontUploadObjects();
-
   return DEMO_ERROR_NONE;
 }
 

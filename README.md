@@ -2,8 +2,6 @@
 
 ## TODO
 
-+ theme & font management
-
 + handle CRLF
 
 + double click (select word)

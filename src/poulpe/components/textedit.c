@@ -16,7 +16,7 @@
 #include "poulpe/components/textview.h"
 
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 #include "poulpe/textbuffer.h"
 #include "poulpe/io.h"
 
@@ -127,7 +127,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     {
         ImGuiWindow *window = igGetCurrentWindowRead();
-        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.main_background), 0.0f, 0);
+        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_style.theme->main_background), 0.0f, 0);
     }
 
     if (poulpe_selection_active(textedit->selection))
@@ -180,7 +180,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
                 ImDrawList_AddCircleFilled(draw_list,
                                             center,
                                             radius,
-                                            igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text),
+                                            igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
                                             0);
             }
 
@@ -198,14 +198,14 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
                 ImDrawList_AddLine(draw_list,
                                     (ImVec2) { center.x - 0.5 * tab_size.x, center.y - thickness},
                                     (ImVec2) { center.x - 0.25 * tab_size.x, center.y - thickness},
-                                    igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text),
+                                    igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
                                     thickness);
 
                 ImDrawList_AddTriangleFilled(draw_list,
                                                 (ImVec2) { center.x - 0.25 * tab_size.x, center.y - 0.15 * font_size},
                                                 (ImVec2) { center.x - 0.25 * tab_size.x + 0.15 * font_size, center.y},
                                                 (ImVec2) { center.x - 0.25 * tab_size.x, center.y + 0.15 * font_size },
-                                                igColorConvertFloat4ToU32(poulpe_theme_dark.faint_text));
+                                                igColorConvertFloat4ToU32(poulpe_style.theme->faint_text));
             }
 
             j += sake_utils_utf8_length(line[j]);
@@ -369,7 +369,7 @@ static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
         if (cursor_start_bytes < cursor_end_bytes)
             continue;
 
-        _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+        _draw_lines(textedit, cursor_end_point, cursor_start_point, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
 
         cursor_end_bytes = ts_node_end_byte(match.captures[0].node);
         cursor_end_point = ts_node_end_point(match.captures[0].node);
@@ -384,7 +384,7 @@ static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
     uint32_t last_col = poulpe_line_raw_size(text[last_row]);
     cursor_start_point = cursor_end_point;
     cursor_end_point = (TSPoint) { poulpe_text_size(text) - 1, last_col };
-    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
 }
 
 static void _draw_raw_tree(struct poulpe_textedit *textedit)
@@ -392,7 +392,7 @@ static void _draw_raw_tree(struct poulpe_textedit *textedit)
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     TSPoint cursor_start_point = ts_node_start_point(ts_tree_root_node(textbuffer->tree));
     TSPoint cursor_end_point = ts_node_end_point(ts_tree_root_node(textbuffer->tree));
-    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_theme_dark.primary_text));
+    _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
 }
 
 static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color)

@@ -1,7 +1,7 @@
 ExternalProject_Add(
     cimgui-external
     GIT_REPOSITORY https://github.com/cimgui/cimgui.git
-    GIT_TAG 1.89.8dock
+    GIT_TAG 1.90dock
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
@@ -30,10 +30,13 @@ ExternalProject_Add_Step(
 ExternalProject_Add_Step(
     cimgui-external
     bootstrap
-    COMMAND luajit ./generator.lua gcc "internal" glfw vulkan
+    COMMAND ./generator.sh -t "internal noimstrv" -c "glfw vulkan"
     DEPENDEES download
     WORKING_DIRECTORY ${SOURCE_DIR}/generator
-    BYPRODUCTS ${SOURCE_DIR}/generator/output/cimgui_impl.h
+    BYPRODUCTS 
+        ${SOURCE_DIR}/generator/output/cimgui_impl.h
+        ${SOURCE_DIR}/cimgui.cpp
+        ${SOURCE_DIR}/cimgui.h
 )
 
 add_library(cimgui STATIC ${CIMGUI_SOURCES})
@@ -48,4 +51,6 @@ target_include_directories(cimgui PUBLIC
 
 target_compile_definitions(cimgui PRIVATE 
     IMGUI_IMPL_API=extern\ \"C\"
+    IMGUI_DISABLE_OBSOLETE_KEYIO
+    IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 )

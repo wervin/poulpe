@@ -14,7 +14,7 @@
 
 #include "poulpe/editor.h"
 #include "poulpe/log.h"
-#include "poulpe/theme.h"
+#include "poulpe/style.h"
 
 struct poulpe_statusbar * poulpe_statusbar_new(void)
 {
@@ -70,8 +70,9 @@ enum poulpe_error poulpe_statusbar_notify(struct poulpe_statusbar *statusbar, st
 enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
-
-    igPushFont(statusbar->editor->small_font);
+    
+    igPushFont(poulpe_style.small_font);
+    
     if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, false, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
 
@@ -80,7 +81,7 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 
     ImDrawList *draw_list = igGetWindowDrawList();
     ImGuiWindow *window = igGetCurrentWindowRead();
-    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_theme_dark.main_background), 0.0f, 0);
+    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_style.theme->main_background), 0.0f, 0);
 
     igSameLine(0.0f, content.y);
     error = poulpe_component_draw((struct poulpe_component *) statusbar->indentinfo);
