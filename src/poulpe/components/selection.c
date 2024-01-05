@@ -126,7 +126,6 @@ bool poulpe_selection_active(struct poulpe_selection *selection)
 enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection)
 {   
     struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
         
     uint32_t i = selection->ajusted.start_line_index;
     uint32_t j = i;
@@ -134,33 +133,39 @@ enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection)
     {
         if (selection->ajusted.start_line_index == selection->ajusted.end_line_index)
         {
-            poulpe_line_erase_range(text[j], selection->ajusted.start_glyph_index, selection->ajusted.end_glyph_index);
+            poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start_glyph_index, selection->ajusted.end_glyph_index);
             j++;
         }
         else if (i == selection->ajusted.start_line_index)
         {
-            uint32_t line_size = poulpe_textbuffer_eof_size(textbuffer, text[j]);
-            poulpe_line_erase_range(text[j], selection->ajusted.start_glyph_index, line_size);
+            uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, j);
+            poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start_glyph_index, line_size);
             j++;
         }
         else if (i == selection->ajusted.end_line_index)
         {
-            poulpe_line_erase_range(text[j], 0, selection->ajusted.end_glyph_index);
+            poulpe_textbuffer_line_erase_range(textbuffer, j, 0, selection->ajusted.end_glyph_index);
             j++;
         }
         else
         {
-            poulpe_text_erase(text, j);
+            poulpe_textbuffer_text_erase(textbuffer, j);
         }
         i++;
     }
 
-    if (selection->ajusted.start_line_index < poulpe_text_size(text) - 1)
+    if (selection->ajusted.start_line_index < poulpe_textbuffer_text_size(textbuffer) - 1)
     {
-        uint32_t line_size = poulpe_textbuffer_eof_size(textbuffer, text[selection->ajusted.start_line_index]);
-        uint32_t next_line_size = poulpe_textbuffer_eof_size(textbuffer, text[selection->ajusted.start_line_index + 1]);
-        text[selection->ajusted.start_line_index] = poulpe_line_insert(text[selection->ajusted.start_line_index], line_size, text[selection->ajusted.start_line_index + 1], text[selection->ajusted.start_line_index + 1] + next_line_size);
-        poulpe_text_erase(text, selection->ajusted.start_line_index + 1);
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start_line_index);
+        uint32_t next_line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start_line_index + 1);
+        enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer,
+                                                                selection->ajusted.start_line_index,
+                                                                line_size,
+                                                                poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start_line_index + 1),
+                                                                poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start_line_index + 1) + next_line_size);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+        poulpe_textbuffer_text_erase(textbuffer, selection->ajusted.start_line_index + 1);
     }
 
     return POULPE_ERROR_NONE;

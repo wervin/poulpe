@@ -107,8 +107,8 @@ static void _update_linenumber(struct poulpe_linenumber *linenumber)
 
 static float _maximum_line_number_width(struct poulpe_linenumber *linenumber)
 {
-    poulpe_text text = linenumber->textview->textbuffer->text;
-    uint32_t line_count = poulpe_text_size(text);
+    struct poulpe_textbuffer *textbuffer = linenumber->textview->textbuffer;
+    uint32_t line_count = poulpe_textbuffer_text_size(textbuffer);
 
     char max_line_number_buffer[16];
     snprintf(max_line_number_buffer, 16, "%u", line_count);

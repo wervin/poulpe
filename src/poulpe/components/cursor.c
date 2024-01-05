@@ -91,9 +91,7 @@ void poulpe_cursor_set_textedit(struct poulpe_cursor *cursor, struct poulpe_text
 void poulpe_cursor_update(struct poulpe_cursor *cursor)
 {
     struct poulpe_textbuffer *textbuffer = cursor->textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
-    poulpe_line line = text[(uint32_t) cursor->position.x];
-    uint32_t line_size = poulpe_textbuffer_eof_size(textbuffer, line);
+    uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, cursor->position.x);
     cursor->position.y = cursor->position.y > line_size ? line_size : cursor->position.y;
 }
 
@@ -111,20 +109,20 @@ void poulpe_cursor_move_up(struct poulpe_cursor *cursor)
 
 void poulpe_cursor_move_down(struct poulpe_cursor *cursor)
 {
-    poulpe_text text = cursor->textedit->textview->textbuffer->text;
-    if (cursor->position.x < (poulpe_text_size(text) - 1))
+    struct poulpe_textbuffer *textbuffer = cursor->textedit->textview->textbuffer;
+    if (cursor->position.x < (poulpe_textbuffer_text_size(textbuffer) - 1))
         cursor->position.x++;
     poulpe_cursor_reset(cursor);
 }
 
 void poulpe_cursor_move_left(struct poulpe_cursor *cursor)
 {
-    poulpe_text text = cursor->textedit->textview->textbuffer->text;
-    poulpe_line line = text[(uint32_t) cursor->position.x];
+    struct poulpe_textbuffer *textbuffer = cursor->textedit->textview->textbuffer;
+    const char *line = poulpe_textbuffer_text_at(textbuffer, cursor->position.x);
     if (cursor->position.y > 0)
     {
-        uint32_t utf8_index = poulpe_line_utf8_index(line, cursor->position.y);
-        uint32_t raw_index = poulpe_line_raw_index(line, utf8_index - 1);
+        uint32_t utf8_index = poulpe_textbuffer_line_utf8_index(textbuffer, cursor->position.x, cursor->position.y);
+        uint32_t raw_index = poulpe_textbuffer_line_raw_index(textbuffer, cursor->position.x, utf8_index - 1);
         cursor->position.y -= sake_utils_utf8_length(line[raw_index]);
     }
     poulpe_cursor_reset(cursor);
@@ -135,7 +133,7 @@ void poulpe_cursor_move_right(struct poulpe_cursor *cursor)
     struct poulpe_textbuffer *textbuffer = cursor->textedit->textview->textbuffer;
     poulpe_text text = textbuffer->text;
     poulpe_line line = text[(uint32_t) cursor->position.x];
-    uint32_t line_size = poulpe_textbuffer_eof_size(textbuffer, line);
+    uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, cursor->position.x);
     if (cursor->position.y < line_size)
         cursor->position.y += sake_utils_utf8_length(line[(uint32_t) cursor->position.y]);
     poulpe_cursor_reset(cursor);

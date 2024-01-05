@@ -103,9 +103,8 @@ const char * poulpe_editor_filename(struct poulpe_editor *editor)
 
 ImVec2 poulpe_editor_cursor_position(struct poulpe_editor *editor)
 {
-    poulpe_text text = editor->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = editor->textview->textbuffer;
     uint32_t line_index = editor->textview->textedit->cursor->position.x;
-    poulpe_line line = text[line_index];
-    uint32_t glyph_index = poulpe_line_utf8_index(line, editor->textview->textedit->cursor->position.y);
+    uint32_t glyph_index = poulpe_textbuffer_line_utf8_index(textbuffer, line_index, editor->textview->textedit->cursor->position.y);
     return (ImVec2) {line_index, glyph_index};
 }

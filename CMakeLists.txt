@@ -26,6 +26,7 @@ set(POULPE_SOURCES
     src/poulpe/component.c
     src/poulpe/editor.c
     src/poulpe/error.c
+    src/poulpe/history.c
     src/poulpe/io.c
     src/poulpe/language.c
     src/poulpe/log.c

@@ -178,12 +178,127 @@ void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
     poulpe_textbuffer_tree_parse(textbuffer);
 }
 
-uint32_t poulpe_textbuffer_eof_size(struct poulpe_textbuffer * textbuffer, poulpe_line line)
+const char *poulpe_textbuffer_text_at(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
 {
-    uint32_t raw_size = poulpe_line_raw_size(line);
-    if (raw_size && textbuffer->eof == POULPE_TEXTBUFFER_EOF_LF && line[raw_size - 1] == '\n')
+    return textbuffer->text[line_index];
+}
+
+enum poulpe_error poulpe_textbuffer_text_push_back(struct poulpe_textbuffer *textbuffer)
+{
+    poulpe_line line = poulpe_line_new("", NULL);
+    if (!line)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    textbuffer->text = poulpe_text_push_back(textbuffer->text, &line);
+    if (!textbuffer->text)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back new line");
+        return POULPE_ERROR_MEMORY;
+    } 
+
+    return POULPE_ERROR_NONE;
+}
+
+enum poulpe_error poulpe_textbuffer_text_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+{
+    poulpe_line line = poulpe_line_new("", NULL);
+    if (!line)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    textbuffer->text = poulpe_text_insert(textbuffer->text, line_index, &line);
+    if (!textbuffer->text)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    return POULPE_ERROR_NONE;
+}
+
+void poulpe_textbuffer_text_pop_back(struct poulpe_textbuffer *textbuffer)
+{
+    poulpe_text_pop_back(textbuffer->text);
+}
+
+void poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+{
+    poulpe_text_erase(textbuffer->text, line_index);
+}
+
+uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer *textbuffer)
+{
+    return poulpe_text_size(textbuffer->text);
+}
+
+enum poulpe_error poulpe_textbuffer_line_push_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index, const char *begin, const char *end)
+{
+    textbuffer->text[line_index] = poulpe_line_push_back(textbuffer->text[line_index], begin, end);
+    if (!textbuffer->text[line_index])
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back new characters");
+        return POULPE_ERROR_MEMORY;
+    }
+    return POULPE_ERROR_NONE;
+}
+
+enum poulpe_error poulpe_textbuffer_line_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index, const char *begin, const char *end)
+{
+    textbuffer->text[line_index] = poulpe_line_insert(textbuffer->text[line_index], index, begin, end);
+    if (!textbuffer->text[line_index])
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new characters");
+        return POULPE_ERROR_MEMORY;
+    }
+    return POULPE_ERROR_NONE;
+}
+
+void poulpe_textbuffer_line_pop_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+{
+    poulpe_line_pop_back(textbuffer->text[line_index]);
+}
+
+void poulpe_textbuffer_line_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index)
+{
+    poulpe_line_erase(textbuffer->text[line_index], index);
+}
+
+void poulpe_textbuffer_line_erase_range(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t from, uint32_t to)
+{
+    poulpe_line_erase_range(textbuffer->text[line_index], from, to);
+}
+
+uint32_t poulpe_textbuffer_line_eof_size(struct poulpe_textbuffer * textbuffer, uint32_t line_index)
+{
+    uint32_t raw_size = poulpe_line_raw_size(textbuffer->text[line_index]);
+    if (raw_size && textbuffer->eof == POULPE_TEXTBUFFER_EOF_LF && textbuffer->text[line_index][raw_size - 1] == '\n')
         return raw_size - 1;
     return raw_size;
+}
+
+uint32_t poulpe_textbuffer_line_raw_size(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+{
+    return poulpe_line_raw_size(textbuffer->text[line_index]);
+}
+
+uint32_t poulpe_textbuffer_line_utf8_size(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+{
+    return poulpe_line_utf8_size(textbuffer->text[line_index]);
+}
+
+uint32_t poulpe_textbuffer_line_utf8_index(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t raw_index)
+{
+    return poulpe_line_utf8_index(textbuffer->text[line_index], raw_index);
+}
+
+uint32_t poulpe_textbuffer_line_raw_index(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t utf8_index)
+{
+    return poulpe_line_raw_index(textbuffer->text[line_index], utf8_index);
 }
 
 static const char * _read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read)

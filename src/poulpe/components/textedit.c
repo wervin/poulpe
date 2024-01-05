@@ -144,7 +144,6 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     float maximum_width = 0;
 
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
 
     if (textbuffer->query)
         _draw_highlighted_tree(textedit);
@@ -153,16 +152,16 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
     {
-        poulpe_line line = text[i];
-
         ImVec2 text_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
+
+        const char *line = poulpe_textbuffer_text_at(textbuffer, i);
 
         ImVec2 line_size;
         ImFont_CalcTextSizeA(&line_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
         if (line_size.x > maximum_width)
             maximum_width = line_size.x;
 
-        uint32_t line_raw_size = poulpe_line_raw_size(line);
+        uint32_t line_raw_size = poulpe_textbuffer_line_raw_size(textbuffer, i);
         uint32_t j = 0;
         while (j < line_raw_size)
         {
@@ -229,7 +228,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
         scroll_delta_x = space_size.x * 3;
     }
 
-    ImVec2 size = {maximum_width + scroll_delta_x, (poulpe_text_size(text) + 2) * igGetTextLineHeight() + scroll_delta_y };
+    ImVec2 size = {maximum_width + scroll_delta_x, (poulpe_textbuffer_text_size(textbuffer) + 2) * igGetTextLineHeight() + scroll_delta_y };
     ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y};
     ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + size.y};
     ImRect rect = {upper_left, lower_right};
@@ -250,9 +249,9 @@ void poulpe_textedit_set_textview(struct poulpe_textedit *textedit, struct poulp
 
 static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 {
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     ImVec2 *cursor_position = &textedit->cursor->position;
-    poulpe_line line = text[(uint32_t) cursor_position->x];
+    const char *line = poulpe_textbuffer_text_at(textbuffer, cursor_position->x);
 
     ImGuiWindow *window = igGetCurrentWindowRead();
     ImVec2 content;
@@ -265,7 +264,7 @@ static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 
     uint32_t start = window->Scroll.y / igGetTextLineHeight();
     uint32_t end = (window->Scroll.y + content.y) / igGetTextLineHeight() - 1;
-    end = fmin(end, poulpe_text_size(text));
+    end = fmin(end, poulpe_textbuffer_text_size(textbuffer));
     end = fmax(end, 0);
 
     if (textedit->cursor->position.x < start)
@@ -294,7 +293,6 @@ static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position)
 {
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
 
     ImGuiStyle *style = igGetStyle();
 
@@ -303,12 +301,12 @@ static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_posi
     origin_screen_position.x += style->FramePadding.x;
 
     uint32_t line_index = 0;
-    uint32_t last_line = poulpe_text_size(text) - 1;
+    uint32_t last_line = poulpe_textbuffer_text_size(textbuffer) - 1;
     while (line_index < last_line && mouse_position.y > origin_screen_position.y + (line_index + 1) * igGetTextLineHeight())
         line_index++;
     
-    poulpe_line line = text[line_index];
-    uint32_t line_raw_size = poulpe_textbuffer_eof_size(textbuffer, line);
+    const char *line = poulpe_textbuffer_text_at(textbuffer, line_index);
+    uint32_t line_raw_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index);
     uint32_t raw_glyph_index = 0;
     while (raw_glyph_index < line_raw_size)
     {
@@ -334,7 +332,7 @@ static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_posi
 
 static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
 {
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
 
     ImGuiWindow *window = igGetCurrentWindowRead();
     ImVec2 content;
@@ -342,7 +340,7 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
     
     textedit->line_start = window->Scroll.y / igGetTextLineHeight();
     textedit->line_end = ((window->Scroll.y + content.y) / igGetTextLineHeight()) + 2;
-    textedit->line_end = fmin(textedit->line_end, poulpe_text_size(text));
+    textedit->line_end = fmin(textedit->line_end, poulpe_textbuffer_text_size(textbuffer));
     textedit->line_end = fmax(textedit->line_end, 0);
 
     textedit->scroll_y = window->Scroll.y;
@@ -353,7 +351,6 @@ static enum poulpe_error _update_view(struct poulpe_textedit *textedit)
 static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
 {
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
 
     ts_query_cursor_exec(textbuffer->cursor, textbuffer->query, ts_tree_root_node(textbuffer->tree));
     
@@ -380,10 +377,10 @@ static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
         _draw_lines(textedit, cursor_start_point, cursor_end_point, color);
     }
 
-    uint32_t last_row = poulpe_text_size(text) - 1;
-    uint32_t last_col = poulpe_line_raw_size(text[last_row]);
+    uint32_t last_row = poulpe_textbuffer_text_size(textbuffer) - 1;
+    uint32_t last_col = poulpe_textbuffer_line_raw_size(textbuffer, last_row);
     cursor_start_point = cursor_end_point;
-    cursor_end_point = (TSPoint) { poulpe_text_size(text) - 1, last_col };
+    cursor_end_point = (TSPoint) { last_row, last_col };
     _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
 }
 
@@ -709,18 +706,24 @@ static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedi
     SAKE_MACRO_UNUSED(event);
 
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
+
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
-    uint32_t line_raw_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index]);
+    uint32_t line_raw_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index);
 
     if (glyph_index < line_raw_size)
-        poulpe_line_erase(text[line_index], glyph_index);
-    else if (line_index < poulpe_text_size(text) - 1)
+        poulpe_textbuffer_line_erase(textbuffer, line_index, glyph_index);
+    else if (line_index < poulpe_textbuffer_text_size(textbuffer) - 1)
     {
-        uint32_t next_line_raw_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index + 1]);
-        text[line_index] = poulpe_line_insert(text[line_index], line_raw_size, text[line_index + 1], text[line_index + 1] + next_line_raw_size);
-        poulpe_text_erase(text, line_index + 1);
+        uint32_t next_line_raw_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index + 1);
+        enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer,
+                                                                line_index,
+                                                                line_raw_size,
+                                                                poulpe_textbuffer_text_at(textbuffer, line_index + 1),
+                                                                poulpe_textbuffer_text_at(textbuffer, line_index + 1) + next_line_raw_size);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+        poulpe_textbuffer_text_erase(textbuffer, line_index + 1);
     }
         
     return POULPE_ERROR_NONE;
@@ -731,23 +734,27 @@ static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *text
     SAKE_MACRO_UNUSED(event);
 
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    poulpe_text text = textbuffer->text;
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
     if (glyph_index != 0)
     {
-        uint32_t utf8_index = poulpe_line_utf8_index(text[line_index], glyph_index);
-        uint32_t raw_index = poulpe_line_raw_index(text[line_index], utf8_index - 1);
-        poulpe_line_erase(text[line_index], raw_index);
+        uint32_t utf8_index = poulpe_textbuffer_line_utf8_index(textbuffer, line_index, glyph_index);
+        uint32_t raw_index = poulpe_textbuffer_line_raw_index(textbuffer, line_index, utf8_index - 1);
+        poulpe_textbuffer_line_erase(textbuffer, line_index, raw_index);
         poulpe_cursor_move_left(textedit->cursor);
     }
     else if (line_index != 0)
     {
-        uint32_t previous_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index - 1]);
-        uint32_t current_size = poulpe_textbuffer_eof_size(textbuffer, text[line_index]);
-        text[line_index - 1] = poulpe_line_insert(text[line_index - 1], previous_size, text[line_index], text[line_index] + current_size);
-        poulpe_text_erase(text, line_index);
+        uint32_t previous_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index - 1);
+        uint32_t current_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index);
+        enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer, line_index - 1,
+                                                                previous_size,
+                                                                poulpe_textbuffer_text_at(textbuffer, line_index),
+                                                                poulpe_textbuffer_text_at(textbuffer, line_index) + current_size);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+        poulpe_textbuffer_text_erase(textbuffer, line_index);
         poulpe_cursor_move_up(textedit->cursor);
         textedit->cursor->position.y = previous_size;
     }
@@ -791,49 +798,45 @@ static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit
 {
     SAKE_MACRO_UNUSED(event);
 
+    enum poulpe_error error = POULPE_ERROR_NONE;
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
-    poulpe_line line = poulpe_line_new(textbuffer->text[line_index], textbuffer->text[line_index] + glyph_index);
-    if (!line)
-    {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
-        return POULPE_ERROR_MEMORY;
-    }
+    error = poulpe_textbuffer_text_insert(textbuffer, line_index);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    error = poulpe_textbuffer_line_push_back(textbuffer, line_index,
+                                            poulpe_textbuffer_text_at(textbuffer, line_index + 1),
+                                            poulpe_textbuffer_text_at(textbuffer, line_index + 1) + glyph_index);
+    if (error != POULPE_ERROR_NONE)
+        return error;
 
     const char *eof = textbuffer->eof == POULPE_TEXTBUFFER_EOF_LF ? "\n" : "\r\n";
-    poulpe_line_push_back(line, eof, NULL);
+    error = poulpe_textbuffer_line_push_back(textbuffer, line_index, eof, NULL);
+    if (error != POULPE_ERROR_NONE)
+        return error;
 
-    poulpe_line_erase_range(textbuffer->text[line_index], 0, glyph_index);
-
-    textbuffer->text = poulpe_text_insert(textbuffer->text, line_index, &line);
-    if (!textbuffer->text)
-    {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new line");
-        return POULPE_ERROR_MEMORY;
-    }
+    poulpe_textbuffer_line_erase_range(textbuffer, line_index + 1, 0, glyph_index);
 
     textedit->cursor->position.y = 0;
     poulpe_cursor_move_down(textedit->cursor);
 
-    return POULPE_ERROR_NONE;
+    return error;
 }
 
 static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
 {
     SAKE_MACRO_UNUSED(event);
     
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     uint32_t line_index = textedit->cursor->position.x;
     uint32_t glyph_index = textedit->cursor->position.y;
 
-    text[line_index] = poulpe_line_insert(text[line_index], glyph_index, "\t", NULL);
-    if (!text[line_index])
-    {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back glyph");
-        return POULPE_ERROR_MEMORY;
-    }
+    enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, "\t", NULL);
+    if (error != POULPE_ERROR_NONE)
+        return error;
 
     poulpe_cursor_move_right(textedit->cursor);
 
@@ -842,18 +845,16 @@ static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, 
 
 static enum poulpe_error _handle_keyboard_default(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
 {
-    poulpe_text text = textedit->textview->textbuffer->text;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
     uint32_t line_index = textedit->cursor->position.x;
     for (uint32_t i = 0; i < event->count; i++)
     {
         uint32_t glyph_index = textedit->cursor->position.y;
         uint32_t utf8 = sake_utils_utf8_from_code_point(event->data[i]);
-        text[line_index] = poulpe_line_insert(text[line_index], glyph_index, (const char *) &utf8, NULL);
-        if (!text[line_index])
-        {
-            POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back glyph");
-            return POULPE_ERROR_MEMORY;
-        }
+        enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, (const char *) &utf8, NULL);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
         poulpe_cursor_move_right(textedit->cursor);
     }
     return POULPE_ERROR_NONE;
