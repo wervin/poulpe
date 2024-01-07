@@ -47,13 +47,15 @@ struct poulpe_event_keyboard
     bool page_down;
     bool page_up;
     bool escape;
-    bool left_ctrl;
-    bool left_shift;
-    bool left_alt;
+    bool ctrl;
+    bool shift;
+    bool alt;
     bool a;
     bool c;
     bool v;
     bool x;
+    bool z;
+    bool y;
 };
 
 #endif /* POULPE_EVENT_H */

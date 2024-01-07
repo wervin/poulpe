@@ -19,6 +19,7 @@
 #include "poulpe/style.h"
 #include "poulpe/textbuffer.h"
 #include "poulpe/io.h"
+#include "poulpe/history.h"
 
 static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit);
 static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position);
@@ -507,6 +508,33 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
 
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
 
+    if (event->ctrl && event->z)
+    {
+        struct poulpe_action *action = poulpe_history_current(textbuffer->history);
+        if (action)
+        {
+            poulpe_cursor_update_position(textedit->cursor, action->before.cursor_position);
+
+            error = poulpe_textbuffer_undo(textbuffer);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+            
+            poulpe_textbuffer_tree_edit(textbuffer);
+        }
+    }
+
+    if (event->ctrl && event->y)
+    {
+        error = poulpe_textbuffer_redo(textbuffer);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        struct poulpe_action *action = poulpe_history_current(textbuffer->history);
+        poulpe_cursor_update_position(textedit->cursor, action->after.cursor_position);
+        
+        poulpe_textbuffer_tree_edit(textbuffer);
+    }
+
     if (event->delete)
     {
         if (poulpe_selection_active(textedit->selection))
@@ -649,7 +677,7 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         poulpe_textbuffer_tree_edit(textbuffer);
         
         poulpe_cursor_update(textedit->cursor);
-        _ensure_cursor_visiblity(textedit);
+        _ensure_cursor_visiblity(textedit); 
     }
 
     if (event->tab)
@@ -677,6 +705,13 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
 
     if (event->count)
     {
+        error = poulpe_textbuffer_new_action(textbuffer);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+        action->before.cursor_position = textedit->cursor->position;
+
         if (poulpe_selection_active(textedit->selection))
         {
             textedit->cursor->position.x = textedit->selection->ajusted.start_line_index;
@@ -695,6 +730,8 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         poulpe_textbuffer_tree_edit(textbuffer);
 
         poulpe_cursor_update(textedit->cursor);
+        action->after.cursor_position = textedit->cursor->position;
+        
         _ensure_cursor_visiblity(textedit);
     }
 

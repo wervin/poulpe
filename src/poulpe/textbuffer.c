@@ -5,6 +5,7 @@
 
 #include <sake/utils.h>
 #include <sake/macro.h>
+#include <sake/vector.h>
 
 #include <tree_sitter/api.h>
 
@@ -13,9 +14,16 @@
 #include "poulpe/style.h"
 #include "poulpe/text.h"
 #include "poulpe/language.h"
+#include "poulpe/history.h"
 
 static const char * _read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
 static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer);
+
+static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+
+static enum poulpe_error _undo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+static enum poulpe_error _redo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 
 struct poulpe_textbuffer * poulpe_textbuffer_new(void)
 {
@@ -31,6 +39,10 @@ struct poulpe_textbuffer * poulpe_textbuffer_new(void)
     textbuffer->eof = POULPE_TEXTBUFFER_EOF_LF;
 
     textbuffer->tree = NULL;
+
+    textbuffer->history = poulpe_history_new();
+    if (!textbuffer->history)
+        return NULL;
 
     return textbuffer;
 }
@@ -141,7 +153,8 @@ void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer)
         ts_tree_delete(textbuffer->tree);
     if (textbuffer->parser)
         ts_parser_delete(textbuffer->parser);
-    
+
+    poulpe_history_free(textbuffer->history);
     free(textbuffer);
 }
 
@@ -176,6 +189,58 @@ void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
     }
 
     poulpe_textbuffer_tree_parse(textbuffer);
+}
+
+enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer)
+{
+    if (poulpe_history_size(textbuffer->history) && textbuffer->history->current)
+    {
+        struct poulpe_action *action = poulpe_history_current(textbuffer->history);
+        for (uint32_t i = 0; i < poulpe_action_size(action); i++)
+        {
+            enum poulpe_error error = _undo_subaction(textbuffer, action->subactions[i]);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+        }
+        
+        poulpe_history_undo(textbuffer->history);
+    }
+    return POULPE_ERROR_NONE;
+}
+
+enum poulpe_error poulpe_textbuffer_redo(struct poulpe_textbuffer *textbuffer)
+{
+    if (poulpe_history_size(textbuffer->history) && textbuffer->history->current < poulpe_history_size(textbuffer->history))
+    {
+        poulpe_history_redo(textbuffer->history);
+
+        struct poulpe_action *action = poulpe_history_current(textbuffer->history);
+        for (uint32_t i = 0; i < poulpe_action_size(action); i++)
+        {
+            enum poulpe_error error = _redo_subaction(textbuffer, action->subactions[i]);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+        }
+    }
+    return POULPE_ERROR_NONE;
+}
+
+enum poulpe_error poulpe_textbuffer_new_action(struct poulpe_textbuffer *textbuffer)
+{
+    struct poulpe_action *action = poulpe_action_new();
+    if (!action)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate action");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    poulpe_history_update(textbuffer->history);
+
+    enum poulpe_error error = poulpe_history_push_back(textbuffer->history, &action);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    return POULPE_ERROR_NONE;
 }
 
 const char *poulpe_textbuffer_text_at(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
@@ -249,12 +314,33 @@ enum poulpe_error poulpe_textbuffer_line_push_back(struct poulpe_textbuffer *tex
 
 enum poulpe_error poulpe_textbuffer_line_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index, const char *begin, const char *end)
 {
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    subaction->type = POULPE_SUBACTION_TYPE_LINE_INSERT;
+    subaction->line = poulpe_line_new(begin, end);
+    subaction->line_index = line_index;
+    subaction->from = index;
+    subaction->to = end ? end - begin : (uint32_t) strlen(begin);
+    subaction->to += index;
+
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     textbuffer->text[line_index] = poulpe_line_insert(textbuffer->text[line_index], index, begin, end);
     if (!textbuffer->text[line_index])
     {
         POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new characters");
         return POULPE_ERROR_MEMORY;
     }
+
     return POULPE_ERROR_NONE;
 }
 
@@ -331,5 +417,75 @@ static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer)
 
     textbuffer->cursor = ts_query_cursor_new();
 
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    switch (subaction->type)
+    {
+    case POULPE_SUBACTION_TYPE_TEXT_INSERT:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+
+    case POULPE_SUBACTION_TYPE_TEXT_ERASE:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+
+    case POULPE_SUBACTION_TYPE_LINE_INSERT:
+        return _undo_line_insert(textbuffer, subaction);
+
+    case POULPE_SUBACTION_TYPE_LINE_ERASE:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+    
+    default:
+        POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown subaction type");
+        return POULPE_ERROR_UNKNOWN;
+    }
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    switch (subaction->type)
+    {
+    case POULPE_SUBACTION_TYPE_TEXT_INSERT:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+
+    case POULPE_SUBACTION_TYPE_TEXT_ERASE:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+
+    case POULPE_SUBACTION_TYPE_LINE_INSERT:
+        return _redo_line_insert(textbuffer, subaction);
+
+    case POULPE_SUBACTION_TYPE_LINE_ERASE:
+        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
+        return POULPE_ERROR_NOT_IMPLEMENTED;
+    
+    default:
+        POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown subaction type");
+        return POULPE_ERROR_UNKNOWN;
+    }
+    return POULPE_ERROR_NONE;
+}
+
+
+static enum poulpe_error _undo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_line_erase_range(textbuffer->text[subaction->line_index], subaction->from, subaction->to);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _redo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    textbuffer->text[subaction->line_index] = poulpe_line_insert(textbuffer->text[subaction->line_index], subaction->from, subaction->line, NULL);
+    if (!textbuffer->text[subaction->line_index])
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new characters");
+        return POULPE_ERROR_MEMORY;
+    }
     return POULPE_ERROR_NONE;
 }

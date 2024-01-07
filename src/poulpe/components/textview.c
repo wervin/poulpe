@@ -45,6 +45,8 @@ struct poulpe_textview * poulpe_textview_new(void)
 
 void poulpe_textview_free(struct poulpe_textview *textview)
 {
+    if (textview->textbuffer)
+        poulpe_textbuffer_free(textview->textbuffer);
     poulpe_component_free((struct poulpe_component *) textview->linenumber);
     poulpe_component_free((struct poulpe_component *) textview->textedit);
     free(textview);

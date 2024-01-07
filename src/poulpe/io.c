@@ -26,13 +26,15 @@ enum poulpe_error poulpe_io_handle_keyboard(struct poulpe_component *component)
     event.page_down = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_PageDown, true), (struct poulpe_event *) &event);
     event.page_up = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_PageUp, true), (struct poulpe_event *) &event);
     event.escape = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_Escape, true), (struct poulpe_event *) &event);
-    event.left_ctrl = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_LeftCtrl, true), (struct poulpe_event *) &event);
-    event.left_shift = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_LeftShift, true), (struct poulpe_event *) &event);
-    event.left_alt = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_LeftAlt, true), (struct poulpe_event *) &event);
+    event.ctrl = _update_dirty_bit(io->KeyCtrl, (struct poulpe_event *) &event);
+    event.shift = _update_dirty_bit(io->KeyShift, (struct poulpe_event *) &event);
+    event.alt = _update_dirty_bit(io->KeyAlt, (struct poulpe_event *) &event);
     event.a = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_A, true), (struct poulpe_event *) &event);
     event.x = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_X, true), (struct poulpe_event *) &event);
     event.c = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_C, true), (struct poulpe_event *) &event);
     event.v = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_V, true), (struct poulpe_event *) &event);
+    event.z = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_Z, true), (struct poulpe_event *) &event);
+    event.y = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_Y, true), (struct poulpe_event *) &event);
 
     event.data = io->InputQueueCharacters.Data;
     event.count = io->InputQueueCharacters.Size;
