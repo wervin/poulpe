@@ -19,6 +19,7 @@ static struct _ui _ui = {0};
 
 static enum demo_error _open_editor(const char *path);
 
+
 enum demo_error demo_ui_init(void)
 {
     enum demo_error error = DEMO_ERROR_NONE;

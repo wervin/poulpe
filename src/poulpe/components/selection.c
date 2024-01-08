@@ -44,14 +44,14 @@ enum poulpe_error poulpe_selection_notify(struct poulpe_selection *selection, st
 
 enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
 {    
-    if ( selection->ajusted.end_line_index < selection->textedit->line_start || 
-          selection->textedit->line_end < selection->ajusted.start_line_index )
+    if ( selection->ajusted.end.x < selection->textedit->line_start || 
+          selection->textedit->line_end < selection->ajusted.start.x )
         return POULPE_ERROR_NONE;
 
     poulpe_text text = selection->textedit->textview->textbuffer->text;
 
-    uint32_t start = fmax(selection->ajusted.start_line_index, selection->textedit->line_start);
-    uint32_t end = fmin(selection->ajusted.end_line_index, selection->textedit->line_end);
+    uint32_t start = fmax(selection->ajusted.start.x, selection->textedit->line_start);
+    uint32_t end = fmin(selection->ajusted.end.x, selection->textedit->line_end);
 
     ImGuiStyle *style = igGetStyle();
     ImVec2 origin_screen_position;
@@ -69,29 +69,29 @@ enum poulpe_error poulpe_selection_draw(struct poulpe_selection *selection)
         ImVec2 upper_left = {0};
         ImVec2 lower_right = {0};
 
-        if (i == selection->ajusted.start_line_index && i == selection->ajusted.end_line_index)
+        if (i == selection->ajusted.start.x && i == selection->ajusted.end.x)
         {
             ImVec2 start_size;
-            ImFont_CalcTextSizeA(&start_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.start_glyph_index, NULL);
+            ImFont_CalcTextSizeA(&start_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) selection->ajusted.start.y, NULL);
             ImVec2 end_size;
-            ImFont_CalcTextSizeA(&end_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.end_glyph_index, NULL);
+            ImFont_CalcTextSizeA(&end_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) selection->ajusted.end.y, NULL);
             upper_left = (ImVec2) {origin_screen_position.x + start_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
             lower_right = (ImVec2) {origin_screen_position.x + end_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
-        else if (i == selection->ajusted.start_line_index)
+        else if (i == selection->ajusted.start.x)
         {
             ImVec2 full_size;
             ImFont_CalcTextSizeA(&full_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
             full_size.x = fmax(full_size.x, space_size.x);
             ImVec2 subset_size;
-            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.start_glyph_index, NULL);
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) selection->ajusted.start.y, NULL);
             upper_left = (ImVec2) {origin_screen_position.x + subset_size.x, origin_screen_position.y + i * igGetTextLineHeight()};
             lower_right = (ImVec2) {origin_screen_position.x + full_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
         }
-        else if (i == selection->ajusted.end_line_index)
+        else if (i == selection->ajusted.end.x)
         {
             ImVec2 subset_size;
-            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + selection->ajusted.end_glyph_index, NULL);
+            ImFont_CalcTextSizeA(&subset_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) selection->ajusted.end.y, NULL);
             subset_size.x = fmax(subset_size.x, space_size.x);
             upper_left = (ImVec2) {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
             lower_right = (ImVec2) {origin_screen_position.x + subset_size.x, origin_screen_position.y + (i + 1) * igGetTextLineHeight() };
@@ -119,53 +119,65 @@ void poulpe_selection_set_textedit(struct poulpe_selection *selection, struct po
 
 bool poulpe_selection_active(struct poulpe_selection *selection)
 {
-    return selection->current.start_glyph_index != selection->current.end_glyph_index || 
-            selection->current.start_line_index != selection->current.end_line_index;
+    return selection->current.start.y != selection->current.end.y || 
+            selection->current.start.x != selection->current.end.x;
 }
 
 enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection)
 {   
+    enum poulpe_error error = POULPE_ERROR_NONE;
     struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
         
-    uint32_t i = selection->ajusted.start_line_index;
+    uint32_t i = selection->ajusted.start.x;
     uint32_t j = i;
-    while (i <= selection->ajusted.end_line_index)
+    while (i <= selection->ajusted.end.x)
     {
-        if (selection->ajusted.start_line_index == selection->ajusted.end_line_index)
+        if (selection->ajusted.start.x == selection->ajusted.end.x)
         {
-            poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start_glyph_index, selection->ajusted.end_glyph_index);
+            error = poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start.y, selection->ajusted.end.y);
+            if (error != POULPE_ERROR_NONE)
+                return error;
             j++;
         }
-        else if (i == selection->ajusted.start_line_index)
+        else if (i == selection->ajusted.start.x)
         {
             uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, j);
-            poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start_glyph_index, line_size);
+            error = poulpe_textbuffer_line_erase_range(textbuffer, j, selection->ajusted.start.y, line_size);
+            if (error != POULPE_ERROR_NONE)
+                return error;
             j++;
         }
-        else if (i == selection->ajusted.end_line_index)
+        else if (i == selection->ajusted.end.x)
         {
-            poulpe_textbuffer_line_erase_range(textbuffer, j, 0, selection->ajusted.end_glyph_index);
+            error = poulpe_textbuffer_line_erase_range(textbuffer, j, 0, selection->ajusted.end.y);
+            if (error != POULPE_ERROR_NONE)
+                return error;
             j++;
         }
         else
         {
-            poulpe_textbuffer_text_erase(textbuffer, j);
+            error = poulpe_textbuffer_text_erase(textbuffer, j);
+            if (error != POULPE_ERROR_NONE)
+                return error;
         }
         i++;
     }
 
-    if (selection->ajusted.start_line_index < poulpe_textbuffer_text_size(textbuffer) - 1)
+    if (selection->ajusted.start.x < poulpe_textbuffer_text_size(textbuffer) - 1)
     {
-        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start_line_index);
-        uint32_t next_line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start_line_index + 1);
-        enum poulpe_error error = poulpe_textbuffer_line_insert(textbuffer,
-                                                                selection->ajusted.start_line_index,
-                                                                line_size,
-                                                                poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start_line_index + 1),
-                                                                poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start_line_index + 1) + next_line_size);
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start.x);
+        uint32_t next_line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start.x + 1);
+        error = poulpe_textbuffer_line_insert(textbuffer,
+                                              selection->ajusted.start.x,
+                                              line_size,
+                                              poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start.x + 1),
+                                              poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start.x + 1) + next_line_size);
         if (error != POULPE_ERROR_NONE)
             return error;
-        poulpe_textbuffer_text_erase(textbuffer, selection->ajusted.start_line_index + 1);
+        
+        error = poulpe_textbuffer_text_erase(textbuffer, selection->ajusted.start.x + 1);
+        if (error != POULPE_ERROR_NONE)
+            return error;
     }
 
     return POULPE_ERROR_NONE;
@@ -178,43 +190,43 @@ void poulpe_selection_clear(struct poulpe_selection *selection)
 
 void poulpe_selection_update_start(struct poulpe_selection *selection, ImVec2 position)
 {        
-    selection->current.start_line_index = position.x;
-    selection->current.start_glyph_index = position.y;
+    selection->current.start.x = position.x;
+    selection->current.start.y = position.y;
     _update_selection(selection);
 }
 
 void poulpe_selection_update_end(struct poulpe_selection *selection, ImVec2 position)
 {
-    selection->current.end_line_index = position.x;
-    selection->current.end_glyph_index = position.y;
+    selection->current.end.x = position.x;
+    selection->current.end.y = position.y;
     _update_selection(selection);
 }
 
 static void _update_selection(struct poulpe_selection *selection)
 {   
-    if (selection->current.start_line_index < selection->current.end_line_index)
+    if (selection->current.start.x < selection->current.end.x)
     {
-        selection->ajusted.start_line_index = selection->current.start_line_index;
-        selection->ajusted.end_line_index = selection->current.end_line_index;
+        selection->ajusted.start.x = selection->current.start.x;
+        selection->ajusted.end.x = selection->current.end.x;
     }
     else
     {
-        selection->ajusted.start_line_index = selection->current.end_line_index;
-        selection->ajusted.end_line_index = selection->current.start_line_index;
+        selection->ajusted.start.x = selection->current.end.x;
+        selection->ajusted.end.x = selection->current.start.x;
     }
        
-    if (selection->ajusted.start_line_index == selection->ajusted.end_line_index)
+    if (selection->ajusted.start.x == selection->ajusted.end.x)
     {
-        selection->ajusted.start_glyph_index = selection->current.start_glyph_index < selection->current.end_glyph_index ? 
-                                                    selection->current.start_glyph_index : selection->current.end_glyph_index;
-        selection->ajusted.end_glyph_index = selection->current.start_glyph_index < selection->current.end_glyph_index ? 
-                                                    selection->current.end_glyph_index : selection->current.start_glyph_index;
+        selection->ajusted.start.y = selection->current.start.y < selection->current.end.y ? 
+                                                    selection->current.start.y : selection->current.end.y;
+        selection->ajusted.end.y = selection->current.start.y < selection->current.end.y ? 
+                                                    selection->current.end.y : selection->current.start.y;
     }
     else
     {
-        selection->ajusted.start_glyph_index = selection->current.start_line_index < selection->current.end_line_index ? 
-                                                    selection->current.start_glyph_index : selection->current.end_glyph_index;
-        selection->ajusted.end_glyph_index = selection->current.start_line_index < selection->current.end_line_index ? 
-                                                    selection->current.end_glyph_index : selection->current.start_glyph_index;
+        selection->ajusted.start.y = selection->current.start.x < selection->current.end.x ? 
+                                                    selection->current.start.y : selection->current.end.y;
+        selection->ajusted.end.y = selection->current.start.x < selection->current.end.x ? 
+                                                    selection->current.end.y : selection->current.start.y;
     }
 }

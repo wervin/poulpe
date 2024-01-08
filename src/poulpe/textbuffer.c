@@ -22,8 +22,17 @@ static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer);
 static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 
+static enum poulpe_error _undo_text_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+static enum poulpe_error _redo_text_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+
+static enum poulpe_error _undo_text_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+static enum poulpe_error _redo_text_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+
 static enum poulpe_error _undo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 static enum poulpe_error _redo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+
+static enum poulpe_error _undo_line_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
+static enum poulpe_error _redo_line_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 
 struct poulpe_textbuffer * poulpe_textbuffer_new(void)
 {
@@ -196,9 +205,9 @@ enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer)
     if (poulpe_history_size(textbuffer->history) && textbuffer->history->current)
     {
         struct poulpe_action *action = poulpe_history_current(textbuffer->history);
-        for (uint32_t i = 0; i < poulpe_action_size(action); i++)
+        for (uint32_t i = poulpe_action_size(action); i > 0; i--)
         {
-            enum poulpe_error error = _undo_subaction(textbuffer, action->subactions[i]);
+            enum poulpe_error error = _undo_subaction(textbuffer, action->subactions[i - 1]);
             if (error != POULPE_ERROR_NONE)
                 return error;
         }
@@ -248,27 +257,27 @@ const char *poulpe_textbuffer_text_at(struct poulpe_textbuffer *textbuffer, uint
     return textbuffer->text[line_index];
 }
 
-enum poulpe_error poulpe_textbuffer_text_push_back(struct poulpe_textbuffer *textbuffer)
+enum poulpe_error poulpe_textbuffer_text_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
 {
-    poulpe_line line = poulpe_line_new("", NULL);
-    if (!line)
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
     {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
         return POULPE_ERROR_MEMORY;
     }
 
-    textbuffer->text = poulpe_text_push_back(textbuffer->text, &line);
-    if (!textbuffer->text)
-    {
-        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to push back new line");
-        return POULPE_ERROR_MEMORY;
-    } 
+    subaction->type = POULPE_SUBACTION_TYPE_TEXT_INSERT;
+    subaction->line = NULL;
+    subaction->line_index = line_index;
+    subaction->from = 0;
+    subaction->to = 0;
 
-    return POULPE_ERROR_NONE;
-}
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
 
-enum poulpe_error poulpe_textbuffer_text_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
-{
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     poulpe_line line = poulpe_line_new("", NULL);
     if (!line)
     {
@@ -286,14 +295,30 @@ enum poulpe_error poulpe_textbuffer_text_insert(struct poulpe_textbuffer *textbu
     return POULPE_ERROR_NONE;
 }
 
-void poulpe_textbuffer_text_pop_back(struct poulpe_textbuffer *textbuffer)
+enum poulpe_error poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
 {
-    poulpe_text_pop_back(textbuffer->text);
-}
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
+        return POULPE_ERROR_MEMORY;
+    }
 
-void poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
-{
+    subaction->type = POULPE_SUBACTION_TYPE_TEXT_ERASE;
+    subaction->line = poulpe_line_new(textbuffer->text[line_index], NULL);
+    subaction->line_index = line_index;
+    subaction->from = 0;
+    subaction->to = 0;
+
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     poulpe_text_erase(textbuffer->text, line_index);
+
+    return POULPE_ERROR_NONE;
 }
 
 uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer *textbuffer)
@@ -303,6 +328,28 @@ uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer *textbuffer)
 
 enum poulpe_error poulpe_textbuffer_line_push_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index, const char *begin, const char *end)
 {
+    uint32_t size = poulpe_line_raw_size(textbuffer->text[line_index]);
+
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    subaction->type = POULPE_SUBACTION_TYPE_LINE_INSERT;
+    subaction->line = poulpe_line_new(begin, end);
+    subaction->line_index = line_index;
+    subaction->from = size;
+    subaction->to = end ? end - begin : (uint32_t) strlen(begin);
+    subaction->to += subaction->from;
+
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     textbuffer->text[line_index] = poulpe_line_push_back(textbuffer->text[line_index], begin, end);
     if (!textbuffer->text[line_index])
     {
@@ -326,7 +373,7 @@ enum poulpe_error poulpe_textbuffer_line_insert(struct poulpe_textbuffer *textbu
     subaction->line_index = line_index;
     subaction->from = index;
     subaction->to = end ? end - begin : (uint32_t) strlen(begin);
-    subaction->to += index;
+    subaction->to += subaction->from;
 
     struct poulpe_action *action = poulpe_history_back(textbuffer->history);
 
@@ -344,19 +391,56 @@ enum poulpe_error poulpe_textbuffer_line_insert(struct poulpe_textbuffer *textbu
     return POULPE_ERROR_NONE;
 }
 
-void poulpe_textbuffer_line_pop_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index)
+enum poulpe_error poulpe_textbuffer_line_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index)
 {
-    poulpe_line_pop_back(textbuffer->text[line_index]);
-}
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
+        return POULPE_ERROR_MEMORY;
+    }
 
-void poulpe_textbuffer_line_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index)
-{
+    subaction->type = POULPE_SUBACTION_TYPE_LINE_ERASE;
+    subaction->line = poulpe_line_new(textbuffer->text[line_index] + index, textbuffer->text[line_index] + index + 1);
+    subaction->line_index = line_index;
+    subaction->from = index;
+    subaction->to = subaction->from + 1;
+
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     poulpe_line_erase(textbuffer->text[line_index], index);
+
+    return POULPE_ERROR_NONE;
 }
 
-void poulpe_textbuffer_line_erase_range(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t from, uint32_t to)
+enum poulpe_error poulpe_textbuffer_line_erase_range(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t from, uint32_t to)
 {
+    struct poulpe_subaction *subaction = poulpe_subaction_new();
+    if (!subaction)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate subaction");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    subaction->type = POULPE_SUBACTION_TYPE_LINE_ERASE;
+    subaction->line = poulpe_line_new(textbuffer->text[line_index] + from, textbuffer->text[line_index] + to);
+    subaction->line_index = line_index;
+    subaction->from = from;
+    subaction->to += to;
+
+    struct poulpe_action *action = poulpe_history_back(textbuffer->history);
+
+    enum poulpe_error error = poulpe_action_push_back(action, &subaction);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+    
     poulpe_line_erase_range(textbuffer->text[line_index], from, to);
+
+    return POULPE_ERROR_NONE;
 }
 
 uint32_t poulpe_textbuffer_line_eof_size(struct poulpe_textbuffer * textbuffer, uint32_t line_index)
@@ -425,19 +509,16 @@ static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, s
     switch (subaction->type)
     {
     case POULPE_SUBACTION_TYPE_TEXT_INSERT:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _undo_text_insert(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_TEXT_ERASE:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _undo_text_erase(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_LINE_INSERT:
         return _undo_line_insert(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_LINE_ERASE:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _undo_line_erase(textbuffer, subaction);
     
     default:
         POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown subaction type");
@@ -451,19 +532,16 @@ static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, s
     switch (subaction->type)
     {
     case POULPE_SUBACTION_TYPE_TEXT_INSERT:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _redo_text_insert(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_TEXT_ERASE:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _redo_text_erase(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_LINE_INSERT:
         return _redo_line_insert(textbuffer, subaction);
 
     case POULPE_SUBACTION_TYPE_LINE_ERASE:
-        POULPE_LOG_ERROR(POULPE_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-        return POULPE_ERROR_NOT_IMPLEMENTED;
+        return _redo_line_erase(textbuffer, subaction);
     
     default:
         POULPE_LOG_ERROR(POULPE_ERROR_UNKNOWN, "Unknown subaction type");
@@ -472,6 +550,55 @@ static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, s
     return POULPE_ERROR_NONE;
 }
 
+static enum poulpe_error _undo_text_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_text_erase(textbuffer->text, subaction->line_index);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _redo_text_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_line line = poulpe_line_new("", NULL);
+    if (!line)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    textbuffer->text = poulpe_text_insert(textbuffer->text, subaction->line_index, &line);
+    if (!textbuffer->text)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new line");
+        return POULPE_ERROR_MEMORY;
+    }
+    
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _undo_text_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_line line = poulpe_line_new(subaction->line, NULL);
+    if (!line)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to allocate line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    textbuffer->text = poulpe_text_insert(textbuffer->text, subaction->line_index, &line);
+    if (!textbuffer->text)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new line");
+        return POULPE_ERROR_MEMORY;
+    }
+
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _redo_text_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_text_erase(textbuffer->text, subaction->line_index);
+    return POULPE_ERROR_NONE;
+}
 
 static enum poulpe_error _undo_line_insert(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
 {
@@ -487,5 +614,22 @@ static enum poulpe_error _redo_line_insert(struct poulpe_textbuffer *textbuffer,
         POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new characters");
         return POULPE_ERROR_MEMORY;
     }
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _undo_line_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    textbuffer->text[subaction->line_index] = poulpe_line_insert(textbuffer->text[subaction->line_index], subaction->from, subaction->line, NULL);
+    if (!textbuffer->text[subaction->line_index])
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to insert new characters");
+        return POULPE_ERROR_MEMORY;
+    }
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _redo_line_erase(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
+{
+    poulpe_line_erase_range(textbuffer->text[subaction->line_index], subaction->from, subaction->to);
     return POULPE_ERROR_NONE;
 }

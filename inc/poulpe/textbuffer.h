@@ -48,19 +48,16 @@ enum poulpe_error poulpe_textbuffer_redo(struct poulpe_textbuffer *textbuffer);
 
 enum poulpe_error poulpe_textbuffer_new_action(struct poulpe_textbuffer *textbuffer);
 
-enum poulpe_error poulpe_textbuffer_text_push_back(struct poulpe_textbuffer *textbuffer);
 enum poulpe_error poulpe_textbuffer_text_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
-void poulpe_textbuffer_text_pop_back(struct poulpe_textbuffer *textbuffer);
-void poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
+enum poulpe_error poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
 
 const char *poulpe_textbuffer_text_at(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
 uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer *textbuffer);
 
 enum poulpe_error poulpe_textbuffer_line_push_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index, const char *begin, const char *end);
 enum poulpe_error poulpe_textbuffer_line_insert(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index, const char *begin, const char *end);
-void poulpe_textbuffer_line_pop_back(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
-void poulpe_textbuffer_line_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index);
-void poulpe_textbuffer_line_erase_range(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t from, uint32_t to);
+enum poulpe_error poulpe_textbuffer_line_erase(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t index);
+enum poulpe_error poulpe_textbuffer_line_erase_range(struct poulpe_textbuffer *textbuffer, uint32_t line_index, uint32_t from, uint32_t to);
 
 uint32_t poulpe_textbuffer_line_eof_size(struct poulpe_textbuffer * textbuffer, uint32_t line_index);
 uint32_t poulpe_textbuffer_line_raw_size(struct poulpe_textbuffer *textbuffer, uint32_t line_index);
