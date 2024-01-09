@@ -36,6 +36,9 @@ static enum poulpe_error _handle_mouse_drag(struct poulpe_textedit *textedit, st
 static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_undo(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_redo(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_copy(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_left(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
@@ -516,6 +519,15 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
     if ( (event->ctrl && event->y) || (event->ctrl && event->shift && event->z) )
         return _handle_keyboard_redo(textedit, event);
 
+    if (event->ctrl && event->x)
+        return _push_new_action(textedit, event, _handle_keyboard_cut);
+
+    if (event->ctrl && event->c)
+        return _handle_keyboard_copy(textedit, event);
+
+    if (event->ctrl && event->v)
+        return _push_new_action(textedit, event, _handle_keyboard_paste);
+
     if (event->delete)
         return _push_new_action(textedit, event, _handle_keyboard_delete);
 
@@ -587,6 +599,117 @@ static enum poulpe_error _handle_keyboard_redo(struct poulpe_textedit *textedit,
     poulpe_selection_update_end(textedit->selection, action->after.selection_end_position);
     
     poulpe_textbuffer_tree_edit(textbuffer);
+
+    return error;
+}
+
+static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    
+    enum poulpe_error error = POULPE_ERROR_NONE;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    if (poulpe_selection_active(textedit->selection))
+    {
+        textedit->cursor->position = textedit->selection->ajusted.start;
+        error = poulpe_selection_delete(textedit->selection);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+        poulpe_selection_clear(textedit->selection);
+        poulpe_cursor_reset(textedit->cursor);
+    }
+
+    return error;
+}
+
+static enum poulpe_error _handle_keyboard_copy(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    
+    enum poulpe_error error = POULPE_ERROR_NONE;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    poulpe_line test = poulpe_line_new("static", NULL);
+
+    igSetClipboardText(test);
+
+    poulpe_line_free(test);
+    
+    return error;
+}
+
+static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    
+    enum poulpe_error error = POULPE_ERROR_NONE;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    if (poulpe_selection_active(textedit->selection))
+    {
+        textedit->cursor->position = textedit->selection->ajusted.start;
+        error = poulpe_selection_delete(textedit->selection);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+        poulpe_selection_clear(textedit->selection);
+        poulpe_cursor_reset(textedit->cursor);
+    }
+
+    uint32_t line_index = textedit->cursor->position.x;
+    uint32_t glyph_index = textedit->cursor->position.y;
+
+    const char *clipboard = igGetClipboardText();
+    uint32_t clipboard_size = strlen(clipboard);
+
+    uint32_t i = 0;
+    uint32_t j = 0;
+    while (i < clipboard_size)
+    {
+        if (clipboard[i] == '\n')
+        {
+            error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, clipboard + j, clipboard + i);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+
+            error = poulpe_textbuffer_text_insert(textbuffer, line_index);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+
+            error = poulpe_textbuffer_line_push_back(textbuffer, line_index,
+                                                     poulpe_textbuffer_text_at(textbuffer, line_index + 1),
+                                                     poulpe_textbuffer_text_at(textbuffer, line_index + 1) + glyph_index + i - j);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+
+            const char *eof = textbuffer->eof == POULPE_TEXTBUFFER_EOF_LF ? "\n" : "\r\n";
+            error = poulpe_textbuffer_line_push_back(textbuffer, line_index, eof, NULL);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+
+            error = poulpe_textbuffer_line_erase_range(textbuffer, line_index + 1, 0, glyph_index + i - j);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+
+            line_index++;
+            glyph_index = 0;
+            j = i + 1;
+        }
+
+        i++;
+    }   
+
+    error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, clipboard + j, clipboard + i);
+    if (error != POULPE_ERROR_NONE)
+        return error;
+
+    textedit->cursor->position.x = line_index;
+    textedit->cursor->position.y = glyph_index + i - j;
+
+    poulpe_textbuffer_tree_edit(textbuffer);
+
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
 
     return error;
 }

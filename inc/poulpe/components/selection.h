@@ -11,12 +11,8 @@ struct poulpe_textedit;
 
 struct poulpe_selection_area
 {
-    // uint32_t start_line_index;
-    // uint32_t start_glyph_index;
     ImVec2 start;
     ImVec2 end;
-    // uint32_t end_line_index;
-    // uint32_t end_glyph_index;
 };
 
 struct poulpe_selection
