@@ -41,6 +41,8 @@ enum poulpe_error poulpe_eofinfo_notify(struct poulpe_eofinfo *eofinfo, struct p
 
 enum poulpe_error poulpe_eofinfo_draw(struct poulpe_eofinfo *eofinfo)
 {
+    SAKE_MACRO_UNUSED(eofinfo);
+    
     ImVec2 content;
     igGetContentRegionAvail(&content);
 

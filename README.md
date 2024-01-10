@@ -17,7 +17,10 @@
 
 + select all (CTRL-A)
 
-+ copy (CTRL-C) / paste (CTRL-V) / cut (CTRL-X)
-
-+ add TAB + SELECTION (move right the selection)
 + add MAJ + TAB + SELECTION ((move left the selection))
+
++ manage status buttons
+    + Indentation (priority)
+    + Line Numbers
+    + EOF
+    + Cursor

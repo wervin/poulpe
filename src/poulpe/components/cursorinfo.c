@@ -7,11 +7,15 @@
 #include <sake/macro.h>
 
 #include "poulpe/components/cursorinfo.h"
+#include "poulpe/components/cursor.h"
 #include "poulpe/components/statusbar.h"
+#include "poulpe/components/textview.h"
+#include "poulpe/components/textedit.h"
 
 #include "poulpe/editor.h"
 #include "poulpe/log.h"
 #include "poulpe/text.h"
+#include "poulpe/textbuffer.h"
 
 struct poulpe_cursorinfo * poulpe_cursorinfo_new(void)
 {
@@ -44,7 +48,11 @@ enum poulpe_error poulpe_cursorinfo_draw(struct poulpe_cursorinfo *cursorinfo)
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
-    ImVec2 cursor_position = poulpe_editor_cursor_position(cursorinfo->statusbar->editor);
+    struct poulpe_cursor *cursor = cursorinfo->statusbar->editor->textview->textedit->cursor;
+    struct poulpe_textbuffer *textbuffer = cursorinfo->statusbar->editor->textview->textbuffer;
+    uint32_t line_index = cursor->position.x;
+    uint32_t glyph_index = poulpe_textbuffer_line_utf8_index(textbuffer, line_index, cursor->position.y);
+    ImVec2 cursor_position = (ImVec2) {line_index, glyph_index};
     char buffer[256];
     snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x + 1, (uint32_t) cursor_position.y + 1);
 

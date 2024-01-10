@@ -9,6 +9,14 @@
 #include <sake/macro.h>
 
 #include "poulpe/components/textinfo.h"
+#include "poulpe/components/statusbar.h"
+#include "poulpe/components/textview.h"
+#include "poulpe/components/textedit.h"
+
+#include "poulpe/editor.h"
+#include "poulpe/log.h"
+#include "poulpe/text.h"
+#include "poulpe/textbuffer.h"
 
 #include "poulpe/log.h"
 
@@ -43,7 +51,9 @@ enum poulpe_error poulpe_textinfo_draw(struct poulpe_textinfo *textinfo)
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
-    igButton("GLSL", (ImVec2) {0, content.y});
+    struct poulpe_textbuffer *textbuffer = textinfo->statusbar->editor->textview->textbuffer;
+
+    igButton(poulpe_language_to_str(textbuffer->language_type), (ImVec2) {0, content.y});
 
     return POULPE_ERROR_NONE;
 }

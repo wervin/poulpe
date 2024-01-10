@@ -3,6 +3,8 @@
 
 #include <cimgui.h>
 
+#include <sake/string.h>
+
 #include "poulpe/component.h"
 
 #include "poulpe/error.h"
@@ -29,5 +31,7 @@ enum poulpe_error poulpe_selection_delete(struct poulpe_selection *selection);
 void poulpe_selection_clear(struct poulpe_selection *selection);
 void poulpe_selection_update_start(struct poulpe_selection *selection, ImVec2 position);
 void poulpe_selection_update_end(struct poulpe_selection *selection, ImVec2 position);
+sake_string poulpe_selection_to_str(struct poulpe_selection *selection);
+void poulpe_selection_move_right(struct poulpe_selection *selection);
 
 #endif /* POULPE_COMPONENTS_SELECTION_H */

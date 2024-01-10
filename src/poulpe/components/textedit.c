@@ -14,6 +14,9 @@
 #include "poulpe/components/selection.h"
 #include "poulpe/components/cursor.h"
 #include "poulpe/components/textview.h"
+#include "poulpe/components/indentinfo.h"
+#include "poulpe/components/statusbar.h"
+#include "poulpe/editor.h"
 
 #include "poulpe/log.h"
 #include "poulpe/style.h"
@@ -46,6 +49,7 @@ static enum poulpe_error _handle_keyboard_right(struct poulpe_textedit *textedit
 static enum poulpe_error _handle_keyboard_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_maj_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_default(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 
@@ -549,7 +553,10 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
     if (event->enter)
         return _push_new_action(textedit, event, _handle_keyboard_enter);
 
-    if (event->tab)
+    if (event->tab && event->shift)
+        return _push_new_action(textedit, event, _handle_keyboard_maj_tab);
+
+    if (event->tab && !event->shift)
         return _push_new_action(textedit, event, _handle_keyboard_tab);
 
     if (event->count)
@@ -594,21 +601,24 @@ static enum poulpe_error _handle_keyboard_redo(struct poulpe_textedit *textedit,
         return error;
 
     struct poulpe_action *action = poulpe_history_current(textbuffer->history);
-    poulpe_cursor_update_position(textedit->cursor, action->after.cursor_position);
-    poulpe_selection_update_start(textedit->selection, action->after.selection_start_position);
-    poulpe_selection_update_end(textedit->selection, action->after.selection_end_position);
-    
-    poulpe_textbuffer_tree_edit(textbuffer);
+    if (action)
+    {
+        poulpe_cursor_update_position(textedit->cursor, action->after.cursor_position);
+        poulpe_selection_update_start(textedit->selection, action->after.selection_start_position);
+        poulpe_selection_update_end(textedit->selection, action->after.selection_end_position);
+        
+        poulpe_textbuffer_tree_edit(textbuffer);
+    }
 
     return error;
 }
 
 static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
-{
-    SAKE_MACRO_UNUSED(event);
-    
+{   
     enum poulpe_error error = POULPE_ERROR_NONE;
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    _handle_keyboard_copy(textedit, event);
 
     if (poulpe_selection_active(textedit->selection))
     {
@@ -620,6 +630,11 @@ static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, 
         poulpe_cursor_reset(textedit->cursor);
     }
 
+    poulpe_textbuffer_tree_edit(textbuffer);
+
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
+
     return error;
 }
 
@@ -628,13 +643,14 @@ static enum poulpe_error _handle_keyboard_copy(struct poulpe_textedit *textedit,
     SAKE_MACRO_UNUSED(event);
     
     enum poulpe_error error = POULPE_ERROR_NONE;
-    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
 
-    poulpe_line test = poulpe_line_new("static", NULL);
+    sake_string selection = poulpe_selection_to_str(textedit->selection);
+    if (!selection)
+        return POULPE_ERROR_MEMORY;
 
-    igSetClipboardText(test);
+    igSetClipboardText(selection);
 
-    poulpe_line_free(test);
+    sake_string_free(selection);
     
     return error;
 }
@@ -958,31 +974,85 @@ static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit
     return error;
 }
 
+static enum poulpe_error _handle_keyboard_maj_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+
+    enum poulpe_error error = POULPE_ERROR_NONE;
+
+    // struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    // struct poulpe_selection *selection = textedit->selection;
+
+    // if (poulpe_selection_active(selection))
+    // {
+    //     uint32_t i = selection->ajusted.start.x;
+    //     while (i <= selection->ajusted.end.x)
+    //     {
+    //         error = poulpe_textbuffer_line_insert(textbuffer, i, 0, "\t", NULL);
+    //         if (error != POULPE_ERROR_NONE)
+    //             return error;
+    //         i++;
+    //     }
+    //     poulpe_selection_move_right(selection);
+    // }
+    // else
+    // {
+    //     uint32_t line_index = textedit->cursor->position.x;
+    //     uint32_t glyph_index = textedit->cursor->position.y;
+
+    //     error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, "\t", NULL);
+    //     if (error != POULPE_ERROR_NONE)
+    //         return error;
+    // }
+
+    // poulpe_cursor_move_right(textedit->cursor);
+
+    // poulpe_textbuffer_tree_edit(textbuffer);
+
+    // poulpe_cursor_update(textedit->cursor);
+    // _ensure_cursor_visiblity(textedit);
+
+    return error;
+}
+
 static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
 {
     SAKE_MACRO_UNUSED(event);
 
     enum poulpe_error error = POULPE_ERROR_NONE;
+    enum poulpe_indentinfo_type indentation = textedit->textview->editor->statusbar->indentinfo->current;    
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    struct poulpe_selection *selection = textedit->selection;
 
-    if (poulpe_selection_active(textedit->selection))
+    if (poulpe_selection_active(selection))
     {
-        textedit->cursor->position = textedit->selection->ajusted.start;
-        error = poulpe_selection_delete(textedit->selection);
+        uint32_t i = selection->ajusted.start.x;
+        while (i <= selection->ajusted.end.x)
+        {
+            error = poulpe_textbuffer_line_insert(textbuffer, i, 0, poulpe_indentinfo_str(indentation), NULL);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+            i++;
+        }
+
+        for (uint32_t i = 0; i < poulpe_indentinfo_length(indentation); i++)
+        {
+            poulpe_selection_move_right(selection);
+            poulpe_cursor_move_right(textedit->cursor);
+        }
+    }
+    else
+    {
+        uint32_t line_index = textedit->cursor->position.x;
+        uint32_t glyph_index = textedit->cursor->position.y;
+
+        error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, poulpe_indentinfo_str(indentation), NULL);
         if (error != POULPE_ERROR_NONE)
             return error;
-        poulpe_selection_clear(textedit->selection);
-        poulpe_cursor_reset(textedit->cursor);
+
+        for (uint32_t i = 0; i < poulpe_indentinfo_length(indentation); i++)
+            poulpe_cursor_move_right(textedit->cursor);
     }
-
-    uint32_t line_index = textedit->cursor->position.x;
-    uint32_t glyph_index = textedit->cursor->position.y;
-
-    error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, "\t", NULL);
-    if (error != POULPE_ERROR_NONE)
-        return error;
-
-    poulpe_cursor_move_right(textedit->cursor);
 
     poulpe_textbuffer_tree_edit(textbuffer);
 

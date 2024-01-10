@@ -72,6 +72,9 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
     enum poulpe_error error = POULPE_ERROR_NONE;
     
     igPushFont(poulpe_style.small_font);
+
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2) {5.f, 5.f});
+    igPushStyleVar_Vec2(ImGuiStyleVar_ItemSpacing, (ImVec2) {5.f, 5.f});
     
     if (!igBeginChild_Str("Poulpe##statusbar", (ImVec2) {0}, false, ImGuiWindowFlags_NoScrollbar))
         goto end_child;
@@ -105,6 +108,7 @@ enum poulpe_error poulpe_statusbar_draw(struct poulpe_statusbar *statusbar)
 
 end_child:
     igEndChild();
+    igPopStyleVar(2);
     igPopFont();
 
     return error;

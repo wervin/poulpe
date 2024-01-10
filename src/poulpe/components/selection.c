@@ -5,6 +5,7 @@
 #include <cimgui.h>
 
 #include <sake/macro.h>
+#include <sake/utils.h>
 
 #include "poulpe/components/selection.h"
 #include "poulpe/components/textedit.h"
@@ -200,6 +201,88 @@ void poulpe_selection_update_end(struct poulpe_selection *selection, ImVec2 posi
     selection->current.end.x = position.x;
     selection->current.end.y = position.y;
     _update_selection(selection);
+}
+
+sake_string poulpe_selection_to_str(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+
+    sake_string str = sake_string_new("", NULL);
+    if (!str)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Cannot allocate string");
+        return NULL;
+    }
+
+    uint32_t i = selection->ajusted.start.x;
+    while (i <= selection->ajusted.end.x)
+    {
+        if (selection->ajusted.start.x == selection->ajusted.end.x)
+        {
+            str = sake_string_push_back(str,
+                                        poulpe_textbuffer_text_at(textbuffer, i) + (uint32_t)selection->ajusted.start.y,
+                                        poulpe_textbuffer_text_at(textbuffer, i) + (uint32_t)selection->ajusted.end.y);
+            if (!str)
+            {
+                POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Cannot push back selection string");
+                return NULL;
+            }
+        }
+        else if (i == selection->ajusted.start.x)
+        {
+            uint32_t line_size = poulpe_textbuffer_line_raw_size(textbuffer, i);
+            str = sake_string_push_back(str,
+                                        poulpe_textbuffer_text_at(textbuffer, i) + (uint32_t)selection->ajusted.start.y,
+                                        poulpe_textbuffer_text_at(textbuffer, i) + line_size);
+            if (!str)
+            {
+                POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Cannot push back selection string");
+                return NULL;
+            }
+        }
+        else if (i == selection->ajusted.end.x)
+        {
+            str = sake_string_push_back(str,
+                                        poulpe_textbuffer_text_at(textbuffer, i),
+                                        poulpe_textbuffer_text_at(textbuffer, i) + (uint32_t)selection->ajusted.end.y);
+            if (!str)
+            {
+                POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Cannot push back selection string");
+                return NULL;
+            }
+        }
+        else
+        {
+            str = sake_string_push_back(str, poulpe_textbuffer_text_at(textbuffer, i), NULL);
+            if (!str)
+            {
+                POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Cannot push back selection string");
+                return NULL;
+            }
+        }
+        i++;
+    }
+    return str;
+}
+
+void poulpe_selection_move_right(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
+
+    {
+        poulpe_line line = text[(uint32_t)selection->ajusted.start.x];
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start.x);
+        if (selection->ajusted.start.y < line_size)
+            selection->ajusted.start.y += sake_utils_utf8_length(line[(uint32_t)selection->ajusted.start.y]);
+    }
+
+    {
+        poulpe_line line = text[(uint32_t)selection->ajusted.end.x];
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.end.x);
+        if (selection->ajusted.end.y < line_size)
+            selection->ajusted.end.y += sake_utils_utf8_length(line[(uint32_t)selection->ajusted.end.y]);
+    }
 }
 
 static void _update_selection(struct poulpe_selection *selection)
