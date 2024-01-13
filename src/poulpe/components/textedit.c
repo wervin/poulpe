@@ -9,6 +9,7 @@
 
 #include <sake/macro.h>
 #include <sake/utils.h>
+#include <sake/vector.h>
 
 #include "poulpe/components/textedit.h"
 #include "poulpe/components/selection.h"
@@ -16,6 +17,7 @@
 #include "poulpe/components/textview.h"
 #include "poulpe/components/indentinfo.h"
 #include "poulpe/components/statusbar.h"
+#include "poulpe/components/finder.h"
 #include "poulpe/editor.h"
 
 #include "poulpe/log.h"
@@ -25,12 +27,18 @@
 #include "poulpe/history.h"
 
 static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit);
+static void _ensure_find_results_visibility(struct poulpe_textedit * textedit);
 static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position);
 static enum poulpe_error _update_view(struct poulpe_textedit *textedit);
 
 static void _draw_highlighted_tree(struct poulpe_textedit *textedit);
 static void _draw_raw_tree(struct poulpe_textedit *textedit);
 static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint to, ImU32 color);
+static void _draw_background(struct poulpe_textedit *textedit);
+static void _draw_find_results(struct poulpe_textedit *textedit);
+static void _draw_invisibles(struct poulpe_textedit *textedit);
+static float _get_maximum_width(struct poulpe_textedit *textedit);
+static void _add_widget(struct poulpe_textedit *textedit);
 
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
 static enum poulpe_error _handle_mouse_left_click(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
@@ -42,6 +50,7 @@ static enum poulpe_error _handle_keyboard_redo(struct poulpe_textedit *textedit,
 static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_copy(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_select_all(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_left(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
@@ -49,7 +58,7 @@ static enum poulpe_error _handle_keyboard_right(struct poulpe_textedit *textedit
 static enum poulpe_error _handle_keyboard_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
-static enum poulpe_error _handle_keyboard_maj_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_shift_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_default(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 
@@ -117,8 +126,6 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 
     igPushStyleVar_Vec2(ImGuiStyleVar_FramePadding, (ImVec2) {1.f, 0.f});
 
-    ImGuiStyle *style = igGetStyle();
-
     igSameLine(0.0f, 0.0f);
     if (!igBeginChild_Str("Poulpe##textedit", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysHorizontalScrollbar))
         goto end_child;
@@ -130,19 +137,14 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     error = poulpe_io_handle_mouse((struct poulpe_component *) textedit);
     if (error != POULPE_ERROR_NONE)
         goto end_child;
+
+    _ensure_find_results_visibility(textedit);
     
     _update_view(textedit);
 
-    ImDrawList *draw_list = igGetWindowDrawList();
-    
-    ImVec2 origin_screen_position;
-    igGetCursorScreenPos(&origin_screen_position);
-    origin_screen_position.x += style->FramePadding.x;
+    _draw_background(textedit);
 
-    {
-        ImGuiWindow *window = igGetCurrentWindowRead();
-        ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_style.theme->main_background), 0.0f, 0);
-    }
+    _draw_find_results(textedit);
 
     if (poulpe_selection_active(textedit->selection))
     {
@@ -155,99 +157,14 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     if (error != POULPE_ERROR_NONE)
         goto end_child;
 
-    float maximum_width = 0;
-
-    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-
-    if (textbuffer->query)
+    if (textedit->textview->textbuffer->query)
         _draw_highlighted_tree(textedit);
     else
         _draw_raw_tree(textedit);
 
-    for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
-    {
-        ImVec2 text_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
-
-        const char *line = poulpe_textbuffer_text_at(textbuffer, i);
-
-        ImVec2 line_size;
-        ImFont_CalcTextSizeA(&line_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
-        if (line_size.x > maximum_width)
-            maximum_width = line_size.x;
-
-        uint32_t line_raw_size = poulpe_textbuffer_line_raw_size(textbuffer, i);
-        uint32_t j = 0;
-        while (j < line_raw_size)
-        {
-            if (line[j] == ' ')
-            {
-                ImVec2 text_size;
-                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + j + 1, NULL);
-                ImVec2 space_size;
-                ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
-
-                float font_size = igGetFontSize();
-                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
-                float radius = 1.25f;
-
-                ImDrawList_AddCircleFilled(draw_list,
-                                            center,
-                                            radius,
-                                            igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
-                                            0);
-            }
-
-            if (line[j] == '\t')
-            {
-                ImVec2 text_size;
-                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line , line + j + 1, NULL);
-                ImVec2 tab_size;
-                ImFont_CalcTextSizeA(&tab_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, "\t", NULL, NULL);
-
-                float font_size = igGetFontSize();
-                float thickness = 0.5f;
-                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * tab_size.x, text_start_position.y + 0.5 * font_size};
-
-                ImDrawList_AddLine(draw_list,
-                                    (ImVec2) { center.x - 0.5 * tab_size.x, center.y - thickness},
-                                    (ImVec2) { center.x - 0.25 * tab_size.x, center.y - thickness},
-                                    igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
-                                    thickness);
-
-                ImDrawList_AddTriangleFilled(draw_list,
-                                                (ImVec2) { center.x - 0.25 * tab_size.x, center.y - 0.15 * font_size},
-                                                (ImVec2) { center.x - 0.25 * tab_size.x + 0.15 * font_size, center.y},
-                                                (ImVec2) { center.x - 0.25 * tab_size.x, center.y + 0.15 * font_size },
-                                                igColorConvertFloat4ToU32(poulpe_style.theme->faint_text));
-            }
-
-            j += sake_utils_utf8_length(line[j]);
-        }
-    }
-
-    float scroll_delta_y = 0.0f;
-    float scroll_delta_x = 0.0f;
-    ImGuiWindow *window = igGetCurrentWindowRead();
-    if (window->ScrollbarY)
-    {
-        ImVec2 content;
-        igGetContentRegionAvail(&content);
-        scroll_delta_y = content.y;
-    }
-
-    if (window->ScrollbarX)
-    {
-        ImVec2 space_size;
-        ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
-        scroll_delta_x = space_size.x * 3;
-    }
-
-    ImVec2 size = {maximum_width + scroll_delta_x, (poulpe_textbuffer_text_size(textbuffer) + 2) * igGetTextLineHeight() + scroll_delta_y };
-    ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y};
-    ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + size.y};
-    ImRect rect = {upper_left, lower_right};
-    igItemSize_Vec2(size, -1.0f);
-    igItemAdd(rect, 0, NULL, 0);
+    _draw_invisibles(textedit);
+    
+    _add_widget(textedit);
     
 end_child:
     igEndChild();
@@ -261,18 +178,17 @@ void poulpe_textedit_set_textview(struct poulpe_textedit *textedit, struct poulp
     textedit->textview = textview;
 }
 
-static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
+void poulpe_textedit_ensure_visiblity(struct poulpe_textedit *textedit, ImVec2 position)
 {
     struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    ImVec2 *cursor_position = &textedit->cursor->position;
-    const char *line = poulpe_textbuffer_text_at(textbuffer, cursor_position->x);
+    const char *line = poulpe_textbuffer_text_at(textbuffer, position.x);
 
     ImGuiWindow *window = igGetCurrentWindowRead();
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
     ImVec2 text_size;
-    ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) cursor_position->y, NULL);
+    ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) position.y, NULL);
     ImVec2 space_size;
     ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
 
@@ -281,18 +197,18 @@ static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
     end = fmin(end, poulpe_textbuffer_text_size(textbuffer));
     end = fmax(end, 0);
 
-    if (textedit->cursor->position.x < start)
+    if (position.x < start)
     {
         float scroll_y = 0.0f;
-        scroll_y = textedit->cursor->position.x * igGetTextLineHeight();
+        scroll_y = position.x * igGetTextLineHeight();
         window->DC.CursorPos.y += window->Scroll.y - scroll_y;
         window->Scroll.y = scroll_y;
     }
 
-    if (textedit->cursor->position.x > end)
+    if (position.x > end)
     {
         float scroll_y = 0.0f;
-        scroll_y = (textedit->cursor->position.x  + 1) * igGetTextLineHeight() - content.y;
+        scroll_y = (position.x  + 1) * igGetTextLineHeight() - content.y;
         window->DC.CursorPos.y += window->Scroll.y - scroll_y;
         window->Scroll.y = scroll_y;
     }
@@ -302,6 +218,21 @@ static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
 
     if (text_size.x > (window->Scroll.x + content.x))
         window->Scroll.x = text_size.x + space_size.x - content.x;
+}
+
+static void _ensure_cursor_visiblity(struct poulpe_textedit *textedit)
+{
+    poulpe_textedit_ensure_visiblity(textedit, textedit->cursor->position);
+}
+
+static void _ensure_find_results_visibility(struct poulpe_textedit * textedit)
+{
+    struct poulpe_finder *finder = textedit->textview->editor->statusbar->finder;
+    if (finder->focus && sake_vector_size(finder->results))
+    {
+        poulpe_textedit_ensure_visiblity(textedit, finder->results[finder->result_index]);
+        finder->focus = false;
+    }
 }
 
 static void _get_coordinates(struct poulpe_textedit *textedit, ImVec2 mouse_position, ImVec2 *position)
@@ -462,6 +393,172 @@ static void _draw_lines(struct poulpe_textedit *textedit, TSPoint from, TSPoint 
     }
 }
 
+static void _draw_background(struct poulpe_textedit *textedit)
+{
+    SAKE_MACRO_UNUSED(textedit);
+    
+    ImGuiWindow *window = igGetCurrentWindowRead();
+    ImDrawList *draw_list = igGetWindowDrawList();
+    ImDrawList_AddRectFilled(draw_list, window->InnerRect.Min, window->InnerRect.Max, igColorConvertFloat4ToU32(poulpe_style.theme->main_background), 0.0f, 0);
+}
+
+static void _draw_find_results(struct poulpe_textedit *textedit)
+{
+    ImGuiStyle *style = igGetStyle();
+    ImDrawList *draw_list = igGetWindowDrawList();
+
+    ImVec2 origin_screen_position;
+    igGetCursorScreenPos(&origin_screen_position);
+    origin_screen_position.x += style->FramePadding.x;
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    struct poulpe_finder *finder = textedit->textview->editor->statusbar->finder;
+    if (!strlen(finder->find))
+        return;
+
+    ImVec2 current = finder->results[finder->result_index];
+    ImVec2 pos = {textedit->line_start, 0};
+    while (pos.x < textedit->line_end && poulpe_textbuffer_find(textedit->textview->textbuffer, finder->find, false, &pos))
+    {
+        const char* line = poulpe_textbuffer_text_at(textbuffer, pos.x);
+
+        ImVec2 start_size;
+        ImFont_CalcTextSizeA(&start_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) pos.y, NULL);
+
+        ImVec2 end_size;
+        ImFont_CalcTextSizeA(&end_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + (uint32_t) pos.y + strlen(finder->find), NULL);
+
+        ImVec2 upper_left = (ImVec2) {origin_screen_position.x + start_size.x, origin_screen_position.y + pos.x * igGetTextLineHeight()};
+        ImVec2 lower_right = (ImVec2) {origin_screen_position.x + end_size.x, origin_screen_position.y + (pos.x  + 1) * igGetTextLineHeight() };
+
+        ImVec4 color = pos.x == current.x && pos.y == current.y ? poulpe_style.theme->matched_text : poulpe_style.theme->searched_text;
+        ImDrawList_AddRectFilled(draw_list, upper_left, lower_right, igColorConvertFloat4ToU32(color), 0.0f, 0);
+
+        pos.y += strlen(finder->find);
+    }
+}
+
+static void _draw_invisibles(struct poulpe_textedit *textedit)
+{
+    ImGuiStyle *style = igGetStyle();
+    ImDrawList *draw_list = igGetWindowDrawList();
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    ImVec2 origin_screen_position;
+    igGetCursorScreenPos(&origin_screen_position);
+    origin_screen_position.x += style->FramePadding.x;
+
+    for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
+    {
+        ImVec2 text_start_position = {origin_screen_position.x, origin_screen_position.y + i * igGetTextLineHeight()};
+
+        const char *line = poulpe_textbuffer_text_at(textbuffer, i);
+
+        uint32_t line_raw_size = poulpe_textbuffer_line_raw_size(textbuffer, i);
+        uint32_t j = 0;
+        while (j < line_raw_size)
+        {
+            if (line[j] == ' ')
+            {
+                ImVec2 text_size;
+                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + j + 1, NULL);
+                ImVec2 space_size;
+                ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
+
+                float font_size = igGetFontSize();
+                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * space_size.x, text_start_position.y + 0.5 * font_size};
+                float radius = 1.25f;
+
+                ImDrawList_AddCircleFilled(draw_list,
+                                           center,
+                                           radius,
+                                           igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
+                                           0);
+            }
+
+            if (line[j] == '\t')
+            {
+                ImVec2 text_size;
+                ImFont_CalcTextSizeA(&text_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, line + j + 1, NULL);
+                ImVec2 tab_size;
+                ImFont_CalcTextSizeA(&tab_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, "\t", NULL, NULL);
+
+                float font_size = igGetFontSize();
+                float thickness = 0.5f;
+                ImVec2 center = {text_start_position.x + text_size.x - 0.5 * tab_size.x, text_start_position.y + 0.5 * font_size};
+
+                ImDrawList_AddLine(draw_list,
+                                   (ImVec2){center.x - 0.5 * tab_size.x, center.y - thickness},
+                                   (ImVec2){center.x - 0.25 * tab_size.x, center.y - thickness},
+                                   igColorConvertFloat4ToU32(poulpe_style.theme->faint_text),
+                                   thickness);
+
+                ImDrawList_AddTriangleFilled(draw_list,
+                                             (ImVec2){center.x - 0.25 * tab_size.x, center.y - 0.15 * font_size},
+                                             (ImVec2){center.x - 0.25 * tab_size.x + 0.15 * font_size, center.y},
+                                             (ImVec2){center.x - 0.25 * tab_size.x, center.y + 0.15 * font_size},
+                                             igColorConvertFloat4ToU32(poulpe_style.theme->faint_text));
+            }
+
+            j += sake_utils_utf8_length(line[j]);
+        }
+    }
+}
+
+static float _get_maximum_width(struct poulpe_textedit *textedit)
+{
+    float maximum_width = 0;
+    for (uint32_t i = textedit->line_start; i < textedit->line_end; i++)
+    {
+        const char *line = poulpe_textbuffer_text_at(textedit->textview->textbuffer, i);
+
+        ImVec2 line_size;
+        ImFont_CalcTextSizeA(&line_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, line, NULL, NULL);
+        if (line_size.x > maximum_width)
+            maximum_width = line_size.x;
+    }
+    return maximum_width;
+}
+
+static void _add_widget(struct poulpe_textedit *textedit)
+{
+    ImGuiStyle *style = igGetStyle();
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+
+    ImVec2 origin_screen_position;
+    igGetCursorScreenPos(&origin_screen_position);
+    origin_screen_position.x += style->FramePadding.x;
+
+    float maximum_width = _get_maximum_width(textedit);
+
+    float scroll_delta_y = 0.0f;
+    float scroll_delta_x = 0.0f;
+    ImGuiWindow *window = igGetCurrentWindowRead();
+    if (window->ScrollbarY)
+    {
+        ImVec2 content;
+        igGetContentRegionAvail(&content);
+        scroll_delta_y = content.y;
+    }
+
+    if (window->ScrollbarX)
+    {
+        ImVec2 space_size;
+        ImFont_CalcTextSizeA(&space_size, igGetFont(), igGetFontSize(), FLT_MAX, -1.0f, " ", NULL, NULL);
+        scroll_delta_x = space_size.x * 3;
+    }
+
+    ImVec2 size = {maximum_width + scroll_delta_x, (poulpe_textbuffer_text_size(textbuffer) + 2) * igGetTextLineHeight() + scroll_delta_y };
+    ImVec2 upper_left = {origin_screen_position.x, origin_screen_position.y};
+    ImVec2 lower_right = {origin_screen_position.x + size.x, origin_screen_position.y + size.y};
+    ImRect rect = {upper_left, lower_right};
+    igItemSize_Vec2(size, -1.0f);
+    igItemAdd(rect, 0, NULL, 0);
+}
+
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
@@ -529,6 +626,9 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
     if (event->ctrl && event->c)
         return _handle_keyboard_copy(textedit, event);
 
+    if (event->ctrl && event->a)
+        return _handle_keyboard_select_all(textedit, event);
+
     if (event->ctrl && event->v)
         return _push_new_action(textedit, event, _handle_keyboard_paste);
 
@@ -554,7 +654,7 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         return _push_new_action(textedit, event, _handle_keyboard_enter);
 
     if (event->tab && event->shift)
-        return _push_new_action(textedit, event, _handle_keyboard_maj_tab);
+        return _push_new_action(textedit, event, _handle_keyboard_shift_tab);
 
     if (event->tab && !event->shift)
         return _push_new_action(textedit, event, _handle_keyboard_tab);
@@ -728,6 +828,17 @@ static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit
     _ensure_cursor_visiblity(textedit);
 
     return error;
+}
+
+static enum poulpe_error _handle_keyboard_select_all(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+
+    poulpe_selection_select_all(textedit->selection);
+    poulpe_cursor_update_position(textedit->cursor, textedit->selection->ajusted.end);
+    poulpe_cursor_update(textedit->cursor);
+
+    return POULPE_ERROR_NONE;
 }
 
 static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
@@ -974,43 +1085,68 @@ static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit
     return error;
 }
 
-static enum poulpe_error _handle_keyboard_maj_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+static enum poulpe_error _handle_keyboard_shift_tab(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
 {
     SAKE_MACRO_UNUSED(event);
 
     enum poulpe_error error = POULPE_ERROR_NONE;
+    enum poulpe_indentinfo_type indentation = textedit->textview->editor->statusbar->indentinfo->current;    
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    struct poulpe_selection *selection = textedit->selection;
 
-    // struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    // struct poulpe_selection *selection = textedit->selection;
+    if (poulpe_selection_active(selection))
+    {
+        uint32_t i = selection->ajusted.start.x;
+        while (i <= selection->ajusted.end.x)
+        {
+            const char *line = poulpe_textbuffer_text_at(textbuffer, i);
+            uint32_t line_length = poulpe_textbuffer_line_eof_size(textbuffer, i);
+            uint32_t indent_length = poulpe_indentinfo_length(indentation);
 
-    // if (poulpe_selection_active(selection))
-    // {
-    //     uint32_t i = selection->ajusted.start.x;
-    //     while (i <= selection->ajusted.end.x)
-    //     {
-    //         error = poulpe_textbuffer_line_insert(textbuffer, i, 0, "\t", NULL);
-    //         if (error != POULPE_ERROR_NONE)
-    //             return error;
-    //         i++;
-    //     }
-    //     poulpe_selection_move_right(selection);
-    // }
-    // else
-    // {
-    //     uint32_t line_index = textedit->cursor->position.x;
-    //     uint32_t glyph_index = textedit->cursor->position.y;
+            uint32_t j = 0;
+            while (j < line_length && j < indent_length && (line[0] == ' ' || line[0] == '\t'))
+            {
+                error = poulpe_textbuffer_line_erase(textbuffer, i, 0);
+                if (error != POULPE_ERROR_NONE)
+                    return error;
 
-    //     error = poulpe_textbuffer_line_insert(textbuffer, line_index, glyph_index, "\t", NULL);
-    //     if (error != POULPE_ERROR_NONE)
-    //         return error;
-    // }
+                if (textedit->cursor->position.x == i)
+                    poulpe_cursor_move_left(textedit->cursor);
 
-    // poulpe_cursor_move_right(textedit->cursor);
+                if (selection->ajusted.start.x == i)
+                    poulpe_selection_move_start_left(selection);
 
-    // poulpe_textbuffer_tree_edit(textbuffer);
+                if (selection->ajusted.end.x == i)
+                    poulpe_selection_move_end_left(selection);
+                
+                j++;
+            }
 
-    // poulpe_cursor_update(textedit->cursor);
-    // _ensure_cursor_visiblity(textedit);
+            i++;
+        }
+    }
+    else
+    {
+        uint32_t line_index = textedit->cursor->position.x;
+        const char *line = poulpe_textbuffer_text_at(textbuffer, line_index);
+        uint32_t line_length = poulpe_textbuffer_line_eof_size(textbuffer, line_index);
+        uint32_t indent_length = poulpe_indentinfo_length(indentation);
+
+        uint32_t i = 0;
+        while (i < line_length && i < indent_length && (line[0] == ' ' || line[0] == '\t'))
+        {
+            error = poulpe_textbuffer_line_erase(textbuffer, line_index, 0);
+            if (error != POULPE_ERROR_NONE)
+                return error;
+            poulpe_cursor_move_left(textedit->cursor);
+            i++;
+        }
+    }
+
+    poulpe_textbuffer_tree_edit(textbuffer);
+
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
 
     return error;
 }
@@ -1037,7 +1173,8 @@ static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, 
 
         for (uint32_t i = 0; i < poulpe_indentinfo_length(indentation); i++)
         {
-            poulpe_selection_move_right(selection);
+            poulpe_selection_move_start_right(selection);
+            poulpe_selection_move_end_right(selection);
             poulpe_cursor_move_right(textedit->cursor);
         }
     }

@@ -65,6 +65,7 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
     igPushStyleColor_U32(ImGuiCol_Text, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
     igPushStyleColor_U32(ImGuiCol_ChildBg, igColorConvertFloat4ToU32(poulpe_style.theme->border));
     igPushStyleColor_U32(ImGuiCol_Border, igColorConvertFloat4ToU32(poulpe_style.theme->border));
+    igPushStyleColor_U32(ImGuiCol_FrameBg, igColorConvertFloat4ToU32(poulpe_style.theme->main_background));
     igPushStyleColor_U32(ImGuiCol_Button, igColorConvertFloat4ToU32(poulpe_style.theme->main_background));
     igPushStyleColor_U32(ImGuiCol_ButtonHovered, igColorConvertFloat4ToU32(poulpe_style.theme->hovered_border));
     igPushStyleColor_U32(ImGuiCol_ButtonActive, igColorConvertFloat4ToU32(poulpe_style.theme->active_border));
@@ -89,7 +90,7 @@ end_child:
 
     igPopStyleVar(4);
 
-    igPopStyleColor(10);
+    igPopStyleColor(11);
 
     igPopFont();
 

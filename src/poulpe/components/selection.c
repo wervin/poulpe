@@ -265,24 +265,65 @@ sake_string poulpe_selection_to_str(struct poulpe_selection *selection)
     return str;
 }
 
-void poulpe_selection_move_right(struct poulpe_selection *selection)
+void poulpe_selection_move_start_right(struct poulpe_selection *selection)
 {
     struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
     poulpe_text text = textbuffer->text;
 
-    {
-        poulpe_line line = text[(uint32_t)selection->ajusted.start.x];
-        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.start.x);
-        if (selection->ajusted.start.y < line_size)
-            selection->ajusted.start.y += sake_utils_utf8_length(line[(uint32_t)selection->ajusted.start.y]);
-    }
+    poulpe_line line = text[(uint32_t)selection->current.start.x];
+    uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->current.start.x);
+    if (selection->current.start.y < line_size)
+        selection->current.start.y += sake_utils_utf8_length(line[(uint32_t)selection->current.start.y]);
+    _update_selection(selection);
+}
 
+void poulpe_selection_move_start_left(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+
+    const char *line = poulpe_textbuffer_text_at(textbuffer, selection->current.start.x);
+    if (selection->current.start.y > 0)
     {
-        poulpe_line line = text[(uint32_t)selection->ajusted.end.x];
-        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->ajusted.end.x);
-        if (selection->ajusted.end.y < line_size)
-            selection->ajusted.end.y += sake_utils_utf8_length(line[(uint32_t)selection->ajusted.end.y]);
+        uint32_t utf8_index = poulpe_textbuffer_line_utf8_index(textbuffer, selection->current.start.x, selection->current.start.y);
+        uint32_t raw_index = poulpe_textbuffer_line_raw_index(textbuffer, selection->current.start.x, utf8_index - 1);
+        selection->current.start.y -= sake_utils_utf8_length(line[raw_index]);
     }
+    _update_selection(selection);
+}
+
+void poulpe_selection_move_end_right(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+    poulpe_text text = textbuffer->text;
+
+    poulpe_line line = text[(uint32_t)selection->current.end.x];
+    uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->current.end.x);
+    if (selection->current.end.y < line_size)
+        selection->current.end.y += sake_utils_utf8_length(line[(uint32_t)selection->current.end.y]);
+    _update_selection(selection);
+}
+
+void poulpe_selection_move_end_left(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+
+    const char *line = poulpe_textbuffer_text_at(textbuffer, selection->current.end.x);
+    if (selection->current.end.y > 0)
+    {
+        uint32_t utf8_index = poulpe_textbuffer_line_utf8_index(textbuffer, selection->current.end.x, selection->current.end.y);
+        uint32_t raw_index = poulpe_textbuffer_line_raw_index(textbuffer, selection->current.end.x, utf8_index - 1);
+        selection->current.end.y -= sake_utils_utf8_length(line[raw_index]);
+    }
+    _update_selection(selection);
+}
+
+void poulpe_selection_select_all(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+    uint32_t last_line = poulpe_textbuffer_text_size(textbuffer) - 1;
+    uint32_t last_glyph = poulpe_textbuffer_line_eof_size(textbuffer, last_line);
+    poulpe_selection_update_start(selection, (ImVec2) {0, 0});
+    poulpe_selection_update_end(selection, (ImVec2) {last_line, last_glyph});
 }
 
 static void _update_selection(struct poulpe_selection *selection)

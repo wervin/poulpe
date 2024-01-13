@@ -2,8 +2,6 @@
 
 ## TODO
 
-+ handle CRLF
-
 + double click (select word)
 + triple click (select line)
 
@@ -15,12 +13,4 @@
 + handle alt (to swap lines) (ALT + UP/DOWN)
 + handle maj selection to update selection area (MAJ + UP/DOWN/LEFT/RIGHT)
 
-+ select all (CTRL-A)
-
-+ add MAJ + TAB + SELECTION ((move left the selection))
-
-+ manage status buttons
-    + Indentation (priority)
-    + Line Numbers
-    + EOF
-    + Cursor
++ handle multiline cursor

@@ -35,6 +35,8 @@ struct poulpe_theme
     ImVec4 highlighted_text;
     ImVec4 dimmed_text;
     ImVec4 error_text;
+    ImVec4 searched_text;
+    ImVec4 matched_text;
     ImVec4 warning_text;
     ImVec4 success_text;
     ImVec4 link;

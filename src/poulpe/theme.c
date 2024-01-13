@@ -24,8 +24,12 @@
 #define RED_600         0.69, 0.19, 0.16, 1.0
 #define RED_400         0.82, 0.30, 0.25, 1.0
 
+#define ORANGE_900      0.15, 0.13, 0.04, 1.0
+#define ORANGE_800      0.37, 0.15, 0.03, 1.0
 #define ORANGE_600      0.74, 0.32, 0.08, 1.0
 #define ORANGE_400      0.85, 0.44, 0.17, 1.0
+#define ORANGE_200      0.90, 0.74, 0.61, 1.0
+#define ORANGE_100      0.96, 0.74, 0.61, 1.0
 
 #define YELLOW_600      0.68, 0.51, 0.00, 1.0
 #define YELLOW_400      0.82, 0.64, 0.08, 1.0
@@ -63,6 +67,8 @@ const struct poulpe_theme poulpe_theme_dark = {
     .secondary_text = {BASE_100},
     .highlighted_text = {TURQUOISE_900},
     .dimmed_text = {BASE_975},
+    .searched_text = {ORANGE_900},
+    .matched_text = {ORANGE_800},
     .error_text = {RED_400},
     .warning_text = {ORANGE_400},
     .success_text = {GREEN_400},
@@ -94,6 +100,8 @@ const struct poulpe_theme poulpe_theme_light = {
     .secondary_text = {BLACK},
     .highlighted_text = {TURQUOISE_100},
     .dimmed_text = {BASE_150},
+    .searched_text = {ORANGE_100},
+    .matched_text = {ORANGE_200},
     .error_text = {RED_600},
     .warning_text = {ORANGE_600},
     .success_text = {GREEN_600},

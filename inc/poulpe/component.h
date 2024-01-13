@@ -18,7 +18,8 @@
     X(POULPE_COMPONENT_TYPE_CURSORINFO, 7, cursorinfo) \
     X(POULPE_COMPONENT_TYPE_INDENTINFO, 8, indentinfo) \
     X(POULPE_COMPONENT_TYPE_TEXTINFO, 9, textinfo)     \
-    X(POULPE_COMPONENT_TYPE_EOFINFO, 10, eofinfo)
+    X(POULPE_COMPONENT_TYPE_EOFINFO, 10, eofinfo)      \
+    X(POULPE_COMPONENT_TYPE_FINDER, 11, finder)
 
 enum poulpe_component_type
 {

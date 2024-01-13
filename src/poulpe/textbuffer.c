@@ -321,6 +321,40 @@ enum poulpe_error poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuf
     return POULPE_ERROR_NONE;
 }
 
+bool poulpe_textbuffer_find(struct poulpe_textbuffer *textbuffer, const char *str, bool case_sensitive, ImVec2 *pos)
+{
+    uint32_t size = poulpe_text_size(textbuffer->text);
+    if (pos->x >= size)
+        return false;
+
+    uint32_t i = pos->x;
+    if (pos->y < poulpe_line_raw_size(textbuffer->text[i]))
+    {
+        char *ret = strstr(textbuffer->text[i] + (uint32_t)pos->y, str);
+        if (ret)
+        {
+            pos->x = i;
+            pos->y = ret - textbuffer->text[i];
+            return true;
+        }
+    }
+
+    i++;
+    while (i < poulpe_text_size(textbuffer->text))
+    {
+        char *ret = strstr(textbuffer->text[i], str);
+        if (ret)
+        {
+            pos->x = i;
+            pos->y = ret - textbuffer->text[i];
+            return true;
+        }
+        i++;
+    }
+
+    return false;
+}
+
 uint32_t poulpe_textbuffer_text_size(struct poulpe_textbuffer *textbuffer)
 {
     return poulpe_text_size(textbuffer->text);

@@ -1,6 +1,8 @@
 #ifndef POULPE_COMPONENTS_TEXTEDIT_H
 #define POULPE_COMPONENTS_TEXTEDIT_H
 
+#include <cimgui.h>
+
 #include "poulpe/component.h"
 
 struct poulpe_cursor;
@@ -19,5 +21,6 @@ struct poulpe_textedit
 };
 
 void poulpe_textedit_set_textview(struct poulpe_textedit *textedit, struct poulpe_textview *textview);
+void poulpe_textedit_ensure_visiblity(struct poulpe_textedit *textedit, ImVec2 position);
 
 #endif /* POULPE_COMPONENTS_TEXTEDIT_H */
