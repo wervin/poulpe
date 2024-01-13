@@ -5,9 +5,6 @@
 + double click (select word)
 + triple click (select line)
 
-+ find text (CTRL + F)
-+ replace text (CTRL + R)
-
 + save text buffer (CTRL + S)
 
 + handle alt (to swap lines) (ALT + UP/DOWN)
