@@ -160,7 +160,7 @@ enum poulpe_error poulpe_finder_draw(struct poulpe_finder *finder)
         struct poulpe_textbuffer *textbuffer = finder->statusbar->editor->textview->textbuffer;
         ImVec2 pos = {0, 0};
         sake_vector_clear(finder->results);
-        while (poulpe_textbuffer_find(textbuffer, finder->find, false, &pos))
+        while (poulpe_textbuffer_find(textbuffer, finder->find, finder->case_sensitive, &pos))
         {
             finder->results = sake_vector_push_back(finder->results, &pos);
             pos.y += strlen(finder->find);

@@ -56,10 +56,14 @@ enum poulpe_error poulpe_io_handle_mouse(struct poulpe_component *component)
 
     event.base.type = POULPE_EVENT_TYPE_MOUSE;
 
-    event.left_clicked = _update_dirty_bit(io->MouseClicked[0], (struct poulpe_event *) &event);
     event.left_released = _update_dirty_bit(io->MouseReleased[0], (struct poulpe_event *) &event);
-    event.right_clicked = _update_dirty_bit(io->MouseClicked[1], (struct poulpe_event *) &event);
+    event.left_clicked = _update_dirty_bit(io->MouseClicked[0], (struct poulpe_event *) &event);
+    event.left_double_clicked = _update_dirty_bit(io->MouseClickedCount[0] == 2, (struct poulpe_event *) &event);
+    event.left_triple_clicked = _update_dirty_bit(io->MouseClickedCount[0] == 3, (struct poulpe_event *) &event);
     event.right_released = _update_dirty_bit(io->MouseReleased[1], (struct poulpe_event *) &event);
+    event.right_clicked = _update_dirty_bit(io->MouseClicked[1], (struct poulpe_event *) &event);
+    event.right_double_clicked = _update_dirty_bit(io->MouseClickedCount[1] == 2, (struct poulpe_event *) &event);
+    event.right_triple_clicked = _update_dirty_bit(io->MouseClickedCount[1] == 3, (struct poulpe_event *) &event);
     event.dragged = _update_dirty_bit(igIsMouseDragging(0, -1.0f), (struct poulpe_event *) &event);
     
     event.left_clicked_position.x = io->MouseClickedPos[0].x;

@@ -2,9 +2,6 @@
 
 ## TODO
 
-+ double click (select word)
-+ triple click (select line)
-
 + save text buffer (CTRL + S)
 
 + handle alt (to swap lines) (ALT + UP/DOWN)

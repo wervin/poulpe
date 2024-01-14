@@ -323,6 +323,9 @@ enum poulpe_error poulpe_textbuffer_text_erase(struct poulpe_textbuffer *textbuf
 
 bool poulpe_textbuffer_find(struct poulpe_textbuffer *textbuffer, const char *str, bool case_sensitive, ImVec2 *pos)
 {
+
+    char *(*_strstr)(const char *, const char *) = case_sensitive ? strstr : strcasestr;
+
     uint32_t size = poulpe_text_size(textbuffer->text);
     if (pos->x >= size)
         return false;
@@ -330,7 +333,7 @@ bool poulpe_textbuffer_find(struct poulpe_textbuffer *textbuffer, const char *st
     uint32_t i = pos->x;
     if (pos->y < poulpe_line_raw_size(textbuffer->text[i]))
     {
-        char *ret = strstr(textbuffer->text[i] + (uint32_t)pos->y, str);
+        char *ret = _strstr(textbuffer->text[i] + (uint32_t)pos->y, str);
         if (ret)
         {
             pos->x = i;
@@ -342,7 +345,7 @@ bool poulpe_textbuffer_find(struct poulpe_textbuffer *textbuffer, const char *st
     i++;
     while (i < poulpe_text_size(textbuffer->text))
     {
-        char *ret = strstr(textbuffer->text[i], str);
+        char *ret = _strstr(textbuffer->text[i], str);
         if (ret)
         {
             pos->x = i;

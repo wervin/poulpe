@@ -23,11 +23,15 @@ struct poulpe_event_mouse
     struct poulpe_event base;
     ImVec2 position;
     ImVec2 left_clicked_position;
-    bool left_clicked;
     bool left_released;
+    bool left_clicked;
+    bool left_double_clicked;
+    bool left_triple_clicked;
     ImVec2 right_clicked_position;
-    bool right_clicked;
     bool right_released;
+    bool right_clicked;
+    bool right_double_clicked;
+    bool right_triple_clicked;
     bool dragged;
 };
 

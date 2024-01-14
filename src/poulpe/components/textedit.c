@@ -2,6 +2,7 @@
 #include <float.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 #include <cimgui.h>
 
@@ -41,7 +42,9 @@ static float _get_maximum_width(struct poulpe_textedit *textedit);
 static void _add_widget(struct poulpe_textedit *textedit);
 
 static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
-static enum poulpe_error _handle_mouse_left_click(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
+static enum poulpe_error _handle_mouse_left_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
+static enum poulpe_error _handle_mouse_left_double_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
+static enum poulpe_error _handle_mouse_left_triple_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
 static enum poulpe_error _handle_mouse_drag(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
 
 static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
@@ -419,7 +422,7 @@ static void _draw_find_results(struct poulpe_textedit *textedit)
 
     ImVec2 current = finder->results[finder->result_index];
     ImVec2 pos = {textedit->line_start, 0};
-    while (pos.x < textedit->line_end && poulpe_textbuffer_find(textedit->textview->textbuffer, finder->find, false, &pos))
+    while (pos.x < textedit->line_end && poulpe_textbuffer_find(textedit->textview->textbuffer, finder->find, finder->case_sensitive, &pos))
     {
         const char* line = poulpe_textbuffer_text_at(textbuffer, pos.x);
 
@@ -576,7 +579,21 @@ static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct 
 
     if (event->left_clicked && ImRect_Contains_Vec2(&window->InnerRect, event->position))
     {
-        error = _handle_mouse_left_click(textedit, event);
+        error = _handle_mouse_left_clicked(textedit, event);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+    }
+
+    if (event->left_double_clicked && ImRect_Contains_Vec2(&window->InnerRect, event->position))
+    {
+        error = _handle_mouse_left_double_clicked(textedit, event);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+    }
+
+    if (event->left_triple_clicked && ImRect_Contains_Vec2(&window->InnerRect, event->position))
+    {
+        error = _handle_mouse_left_triple_clicked(textedit, event);
         if (error != POULPE_ERROR_NONE)
             return error;
     }
@@ -591,7 +608,7 @@ static enum poulpe_error _handle_mouse(struct poulpe_textedit *textedit, struct 
     return error;
 }
 
-static enum poulpe_error _handle_mouse_left_click(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
+static enum poulpe_error _handle_mouse_left_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
 {
     ImVec2 position = {0};
     _get_coordinates(textedit, event->position, &position);
@@ -599,6 +616,60 @@ static enum poulpe_error _handle_mouse_left_click(struct poulpe_textedit *texted
     poulpe_selection_update_start(textedit->selection, position);
     poulpe_selection_update_end(textedit->selection, position);
     _ensure_cursor_visiblity(textedit);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_mouse_left_double_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
+{
+    ImVec2 position = {0};
+    _get_coordinates(textedit, event->position, &position);
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    uint32_t length = poulpe_textbuffer_line_eof_size(textbuffer, position.x);
+    const char *line = poulpe_textbuffer_text_at(textbuffer, position.x);
+    
+    uint32_t start_word = position.y;
+    uint32_t end_word = position.y;
+    
+    if (isspace(line[(uint32_t) position.y]))
+    {        
+        while (start_word > 0 && isspace(line[start_word]))
+            start_word--;
+
+        while (end_word < length && isspace(line[end_word]))
+            end_word++;
+    }
+    else
+    {
+        while (start_word > 0 && !sake_utils_is_word_separator(line[start_word]))
+            start_word--;
+
+        while (end_word < length && !sake_utils_is_word_separator(line[end_word]))
+            end_word++;
+    }
+    
+    if (start_word)
+        start_word++;
+
+    ImVec2 start = {position.x, start_word};
+    ImVec2 end = {position.x, end_word};
+    poulpe_selection_update_start(textedit->selection, start);
+    poulpe_selection_update_end(textedit->selection, end);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_mouse_left_triple_clicked(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event)
+{
+    ImVec2 position = {0};
+    _get_coordinates(textedit, event->position, &position);
+
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    uint32_t length = poulpe_textbuffer_line_eof_size(textbuffer, position.x);
+
+    ImVec2 start = {position.x, 0.f};
+    ImVec2 end = {position.x, length};
+    poulpe_selection_update_start(textedit->selection, start);
+    poulpe_selection_update_end(textedit->selection, end);
     return POULPE_ERROR_NONE;
 }
 
