@@ -46,7 +46,8 @@ enum poulpe_error poulpe_eofinfo_draw(struct poulpe_eofinfo *eofinfo)
     ImVec2 content;
     igGetContentRegionAvail(&content);
 
-    igButton("LF", (ImVec2){0, content.y});
+    igSetCursorPosY(1);
+    igText("LF");
 
     return POULPE_ERROR_NONE;
 }

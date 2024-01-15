@@ -35,6 +35,7 @@ enum poulpe_error poulpe_io_handle_keyboard(struct poulpe_component *component)
     event.v = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_V, true), (struct poulpe_event *) &event);
     event.z = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_Z, true), (struct poulpe_event *) &event);
     event.y = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_Y, true), (struct poulpe_event *) &event);
+    event.s = _update_dirty_bit(igIsKeyPressed_Bool(ImGuiKey_S, true), (struct poulpe_event *) &event);
 
     event.data = io->InputQueueCharacters.Data;
     event.count = io->InputQueueCharacters.Size;

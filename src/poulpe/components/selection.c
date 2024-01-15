@@ -291,6 +291,23 @@ void poulpe_selection_move_start_left(struct poulpe_selection *selection)
     _update_selection(selection);
 }
 
+void poulpe_selection_move_start_up(struct poulpe_selection *selection)
+{
+    if (selection->current.start.x > 0)
+        selection->current.start.x--;
+    
+    _update_selection(selection);
+}
+
+void poulpe_selection_move_start_down(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+    if (selection->current.start.x < (poulpe_textbuffer_text_size(textbuffer) - 1))
+        selection->current.start.x++;
+    
+    _update_selection(selection);
+}
+
 void poulpe_selection_move_end_right(struct poulpe_selection *selection)
 {
     struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
@@ -317,6 +334,23 @@ void poulpe_selection_move_end_left(struct poulpe_selection *selection)
     _update_selection(selection);
 }
 
+void poulpe_selection_move_end_up(struct poulpe_selection *selection)
+{
+    if (selection->current.end.x > 0)
+        selection->current.end.x--;
+    
+    _update_selection(selection);
+}
+
+void poulpe_selection_move_end_down(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+    if (selection->current.end.x < (poulpe_textbuffer_text_size(textbuffer) - 1))
+        selection->current.end.x++;
+    
+    _update_selection(selection);
+}
+
 void poulpe_selection_select_all(struct poulpe_selection *selection)
 {
     struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
@@ -326,8 +360,23 @@ void poulpe_selection_select_all(struct poulpe_selection *selection)
     poulpe_selection_update_end(selection, (ImVec2) {last_line, last_glyph});
 }
 
+void poulpe_selection_update(struct poulpe_selection *selection)
+{
+    struct poulpe_textbuffer *textbuffer = selection->textedit->textview->textbuffer;
+
+    {
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->current.start.x);
+        selection->current.start.y = selection->current.start.y > line_size ? line_size : selection->current.start.y;
+    }
+
+    {
+        uint32_t line_size = poulpe_textbuffer_line_eof_size(textbuffer, selection->current.end.x);
+        selection->current.end.y = selection->current.end.y > line_size ? line_size : selection->current.end.y;
+    }
+}
+
 static void _update_selection(struct poulpe_selection *selection)
-{   
+{
     if (selection->current.start.x < selection->current.end.x)
     {
         selection->ajusted.start.x = selection->current.start.x;

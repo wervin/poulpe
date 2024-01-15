@@ -136,7 +136,17 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
         return POULPE_ERROR_MEMORY;
     }
 
+    textbuffer->path = sake_string_new(path, NULL);
+    if (!textbuffer->path)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, "Failed to save path");
+        return POULPE_ERROR_MEMORY;
+    }
+
     textbuffer->language_type = poulpe_language_auto_detect(textbuffer->filename);
+
+    if (textbuffer->language_type == POULPE_LANGUAGE_TYPE_RAW)
+        return POULPE_ERROR_NONE;
 
     enum poulpe_error error = _init_parser(textbuffer);
     if (error != POULPE_ERROR_NONE)
@@ -144,6 +154,24 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
 
     poulpe_textbuffer_tree_parse(textbuffer);
 
+    return POULPE_ERROR_NONE;
+}
+
+enum poulpe_error poulpe_textbuffer_save_file(struct poulpe_textbuffer * textbuffer)
+{
+    FILE *fd = fopen(textbuffer->path, "w");
+    if (!fd)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_MEMORY, textbuffer->path);
+        return POULPE_ERROR_MEMORY;
+    }
+
+    for (uint32_t i = 0; i < poulpe_text_size(textbuffer->text); i++)
+    {
+        fwrite(textbuffer->text[i], sizeof(char), poulpe_line_raw_size(textbuffer->text[i]), fd);
+    }
+
+    fclose(fd);
     return POULPE_ERROR_NONE;
 }
 
@@ -169,40 +197,32 @@ void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer)
 
 void poulpe_textbuffer_tree_parse(struct poulpe_textbuffer *textbuffer)
 {
+    if (!textbuffer->parser)
+        return;
+
     TSInput input = {
         .encoding = TSInputEncodingUTF8,
         .payload = textbuffer,
         .read = _read
     };
 
-    textbuffer->tree = ts_parser_parse(textbuffer->parser, textbuffer->tree, input);
+    if (textbuffer->tree) 
+        ts_tree_delete(textbuffer->tree);
+
+    textbuffer->tree = ts_parser_parse(textbuffer->parser, NULL, input);
 }
 
 void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
 {
-    if (textbuffer->tree)
-    {   
-        uint32_t start_byte = ts_node_start_byte(ts_tree_root_node(textbuffer->tree));
-        uint32_t end_byte = ts_node_end_byte(ts_tree_root_node(textbuffer->tree));
-        TSPoint start_point = ts_node_start_point(ts_tree_root_node(textbuffer->tree));
-        TSPoint end_point = ts_node_end_point(ts_tree_root_node(textbuffer->tree));
-        TSInputEdit input_edit = {
-            .start_byte = start_byte,
-            .old_end_byte = end_byte,
-            .new_end_byte = end_byte,
-            .start_point = start_point,
-            .old_end_point = end_point,
-            .new_end_point = end_point
-        };
-        ts_tree_edit(textbuffer->tree, &input_edit);
-    }
-
     poulpe_textbuffer_tree_parse(textbuffer);
 }
 
 enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer)
 {
-    if (poulpe_history_size(textbuffer->history) && textbuffer->history->current)
+    if (!poulpe_history_size(textbuffer->history))
+        return POULPE_ERROR_NONE;
+
+    if (textbuffer->history->current)
     {
         struct poulpe_action *action = poulpe_history_current(textbuffer->history);
         for (uint32_t i = poulpe_action_size(action); i > 0; i--)
@@ -214,12 +234,16 @@ enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer)
         
         poulpe_history_undo(textbuffer->history);
     }
+
     return POULPE_ERROR_NONE;
 }
 
 enum poulpe_error poulpe_textbuffer_redo(struct poulpe_textbuffer *textbuffer)
 {
-    if (poulpe_history_size(textbuffer->history) && textbuffer->history->current < poulpe_history_size(textbuffer->history))
+    if (!poulpe_history_size(textbuffer->history))
+        return POULPE_ERROR_NONE;
+
+    if (textbuffer->history->current < poulpe_history_size(textbuffer->history))
     {
         poulpe_history_redo(textbuffer->history);
 
@@ -231,6 +255,7 @@ enum poulpe_error poulpe_textbuffer_redo(struct poulpe_textbuffer *textbuffer)
                 return error;
         }
     }
+    
     return POULPE_ERROR_NONE;
 }
 
@@ -248,7 +273,7 @@ enum poulpe_error poulpe_textbuffer_new_action(struct poulpe_textbuffer *textbuf
     enum poulpe_error error = poulpe_history_push_back(textbuffer->history, &action);
     if (error != POULPE_ERROR_NONE)
         return error;
-
+    
     return POULPE_ERROR_NONE;
 }
 

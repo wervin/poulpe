@@ -60,6 +60,7 @@ struct poulpe_event_keyboard
     bool x;
     bool z;
     bool y;
+    bool s;
 };
 
 #endif /* POULPE_EVENT_H */

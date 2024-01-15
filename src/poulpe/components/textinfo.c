@@ -53,7 +53,8 @@ enum poulpe_error poulpe_textinfo_draw(struct poulpe_textinfo *textinfo)
 
     struct poulpe_textbuffer *textbuffer = textinfo->statusbar->editor->textview->textbuffer;
 
-    igButton(poulpe_language_to_str(textbuffer->language_type), (ImVec2) {0, content.y});
+    igSetCursorPosY(1);
+    igText(poulpe_language_to_str(textbuffer->language_type));
 
     return POULPE_ERROR_NONE;
 }

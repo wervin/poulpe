@@ -58,15 +58,15 @@ enum demo_error demo_ui_init(void)
         return DEMO_ERROR_MEMORY;
     }
 
+    error = _open_editor("tests/test.c");
+    if (error != DEMO_ERROR_NONE)
+        return error;
+
     error = _open_editor("tests/test.json");
     if (error != DEMO_ERROR_NONE)
         return error;
 
     error = _open_editor("tests/test.frag");
-    if (error != DEMO_ERROR_NONE)
-        return error;
-
-    error = _open_editor("tests/test.c");
     if (error != DEMO_ERROR_NONE)
         return error;
 
@@ -80,17 +80,66 @@ void demo_ui_draw(void)
 
     igNewFrame();
 
-    igShowMetricsWindow(NULL);
-    
+    ImGuiViewport *viewport = igGetMainViewport();
+    igSetNextWindowPos(viewport->WorkPos, 0,  (ImVec2) {0, 0});
+    igSetNextWindowSize(viewport->WorkSize, 0);
+    igSetNextWindowViewport(viewport->ID);
+
+    ImGuiWindowFlags flags = 0;
+    flags |= ImGuiWindowFlags_NoDocking;
+    flags |= ImGuiWindowFlags_NoTitleBar;
+    flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoMove;
+    flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    flags |= ImGuiWindowFlags_NoNavFocus;
+
+    ImGuiStyle *style = igGetStyle();
+
+    igPushStyleColor_Vec4(ImGuiCol_TitleBgActive, (ImVec4){0, 0, 0, 0});
+    igPushStyleColor_Vec4(ImGuiCol_Tab, style->Colors[ImGuiCol_TabUnfocused]);
+    igPushStyleColor_Vec4(ImGuiCol_TabHovered, style->Colors[ImGuiCol_TabHovered]);
+    igPushStyleColor_Vec4(ImGuiCol_TabActive, style->Colors[ImGuiCol_TabUnfocusedActive]);
+    igPushStyleColor_Vec4(ImGuiCol_TabUnfocused, style->Colors[ImGuiCol_TabUnfocused]);
+    igPushStyleColor_Vec4(ImGuiCol_TabUnfocusedActive, style->Colors[ImGuiCol_TabUnfocused]);
+    igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.f, 0.f});
+    igBegin("Main", NULL, flags);
+
+    ImGuiID dockspace_id = igGetID_Str("DockSpace");
+    if (!igDockBuilderGetNode(dockspace_id))
+    {
+        igDockBuilderRemoveNode(dockspace_id);
+        igDockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_None);
+
+        ImGuiID dock_id = dockspace_id;
+        ImGuiID editor_id = igDockBuilderSplitNode(dock_id, ImGuiDir_Left, 0.5f, NULL, &dock_id);
+        ImGuiID debug_id = igDockBuilderSplitNode(dock_id, ImGuiDir_Right, 0.5f, NULL, &dock_id);
+
+        for (uint32_t i = 0; i < sake_vector_size(_ui.editors); i++)
+        {
+            const char *filename = poulpe_editor_filename(_ui.editors[i]);
+            igDockBuilderDockWindow(filename, editor_id);
+        }
+        igDockBuilderDockWindow("Dear ImGui Metrics/Debugger", debug_id);
+
+        igDockBuilderFinish(dock_id);
+    }
+
+    igDockSpace(dockspace_id, (ImVec2) {0.0f, 0.0f}, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoWindowMenuButton, NULL);
+
     for (uint32_t i = 0; i < sake_vector_size(_ui.editors); i++)
     {
         const char *filename = poulpe_editor_filename(_ui.editors[i]);
-        igPushStyleVar_Vec2(ImGuiStyleVar_WindowPadding, (ImVec2){0.f, 0.f});
         if (igBegin(filename, NULL, 0))
             poulpe_editor_draw(_ui.editors[i]);
         igEnd();
-        igPopStyleVar(1);
     }
+
+    igShowMetricsWindow(NULL);
+
+    igEnd();
+    igPopStyleVar(1);
+    igPopStyleColor(6);
 
     igRender();
 }

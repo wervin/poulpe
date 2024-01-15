@@ -48,12 +48,19 @@ static enum poulpe_error _handle_mouse_left_triple_clicked(struct poulpe_textedi
 static enum poulpe_error _handle_mouse_drag(struct poulpe_textedit *textedit, struct poulpe_event_mouse *event);
 
 static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_save(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_undo(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_redo(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_copy(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_select_all(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_alt_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_alt_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_shift_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_shift_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_shift_left(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
+static enum poulpe_error _handle_keyboard_shift_right(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
 static enum poulpe_error _handle_keyboard_left(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event);
@@ -160,7 +167,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
     if (error != POULPE_ERROR_NONE)
         goto end_child;
 
-    if (textedit->textview->textbuffer->query)
+    if (textedit->textview->textbuffer->parser)
         _draw_highlighted_tree(textedit);
     else
         _draw_raw_tree(textedit);
@@ -334,9 +341,10 @@ static void _draw_highlighted_tree(struct poulpe_textedit *textedit)
 
 static void _draw_raw_tree(struct poulpe_textedit *textedit)
 {
-    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
-    TSPoint cursor_start_point = ts_node_start_point(ts_tree_root_node(textbuffer->tree));
-    TSPoint cursor_end_point = ts_node_end_point(ts_tree_root_node(textbuffer->tree));
+    TSPoint cursor_start_point = {textedit->line_start, 0};
+    uint32_t last_row = textedit->line_end - 1;
+    uint32_t last_col = poulpe_textbuffer_line_raw_size(textedit->textview->textbuffer, last_row);
+    TSPoint cursor_end_point = {last_row, last_col};
     _draw_lines(textedit, cursor_start_point, cursor_end_point, igColorConvertFloat4ToU32(poulpe_style.theme->primary_text));
 }
 
@@ -685,6 +693,9 @@ static enum poulpe_error _handle_mouse_drag(struct poulpe_textedit *textedit, st
 
 static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
 {
+    if (event->ctrl && event->s)
+        return _handle_keyboard_save(textedit, event);
+
     if (event->ctrl && event->z && !event->shift)
         return _handle_keyboard_undo(textedit, event);
 
@@ -699,6 +710,24 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
 
     if (event->ctrl && event->a)
         return _handle_keyboard_select_all(textedit, event);
+
+    if (event->alt && event->up)
+        return _push_new_action(textedit, event, _handle_keyboard_alt_up);
+
+    if (event->alt && event->down)
+        return _push_new_action(textedit, event, _handle_keyboard_alt_down);
+
+    if (event->shift && event->up)
+        return _handle_keyboard_shift_up(textedit, event);
+
+    if (event->shift && event->down)
+        return _handle_keyboard_shift_down(textedit, event);
+
+    if (event->shift && event->left)
+        return _handle_keyboard_shift_left(textedit, event);
+
+    if (event->shift && event->right)
+        return _handle_keyboard_shift_right(textedit, event);
 
     if (event->ctrl && event->v)
         return _push_new_action(textedit, event, _handle_keyboard_paste);
@@ -734,6 +763,12 @@ static enum poulpe_error _handle_keyboard(struct poulpe_textedit *textedit, stru
         return _push_new_action(textedit, event, _handle_keyboard_default);
 
     return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_keyboard_save(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    return poulpe_textbuffer_save_file(textedit->textview->textbuffer);
 }
 
 static enum poulpe_error _handle_keyboard_undo(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
@@ -802,7 +837,9 @@ static enum poulpe_error _handle_keyboard_cut(struct poulpe_textedit *textedit, 
     }
 
     poulpe_textbuffer_tree_edit(textbuffer);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -894,7 +931,9 @@ static enum poulpe_error _handle_keyboard_paste(struct poulpe_textedit *textedit
     textedit->cursor->position.y = glyph_index + i - j;
 
     poulpe_textbuffer_tree_edit(textbuffer);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -906,9 +945,177 @@ static enum poulpe_error _handle_keyboard_select_all(struct poulpe_textedit *tex
     SAKE_MACRO_UNUSED(event);
 
     poulpe_selection_select_all(textedit->selection);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update_position(textedit->cursor, textedit->selection->ajusted.end);
     poulpe_cursor_update(textedit->cursor);
+    
+    return POULPE_ERROR_NONE;
+}
 
+static enum poulpe_error _handle_keyboard_alt_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    
+    enum poulpe_error error = POULPE_ERROR_NONE;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    struct poulpe_selection *selection = textedit->selection;
+    uint32_t line_index = textedit->cursor->position.x;
+
+    if (poulpe_selection_active(selection))
+    {
+        if (!selection->ajusted.start.x)
+            return POULPE_ERROR_NONE;
+
+        error = poulpe_textbuffer_text_insert(textbuffer, selection->ajusted.end.x + 1);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_line_push_back(textbuffer, selection->ajusted.end.x + 1, poulpe_textbuffer_text_at(textbuffer, selection->ajusted.start.x - 1), NULL);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_text_erase(textbuffer, selection->ajusted.start.x - 1);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        poulpe_selection_move_start_up(selection);
+        poulpe_selection_move_end_up(selection);
+        poulpe_cursor_move_up(textedit->cursor);
+    }
+    else
+    {
+        if (!line_index)
+            return POULPE_ERROR_NONE;
+
+        error = poulpe_textbuffer_text_insert(textbuffer, line_index - 1);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_line_push_back(textbuffer, line_index - 1, poulpe_textbuffer_text_at(textbuffer, line_index + 1), NULL);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_text_erase(textbuffer, line_index + 1);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        poulpe_cursor_move_up(textedit->cursor);
+    }
+
+    poulpe_textbuffer_tree_edit(textbuffer);
+    poulpe_cursor_update(textedit->cursor);
+    poulpe_selection_update(textedit->selection);
+    _ensure_cursor_visiblity(textedit);
+    
+    return error;
+}
+
+static enum poulpe_error _handle_keyboard_alt_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+
+    enum poulpe_error error = POULPE_ERROR_NONE;
+    struct poulpe_textbuffer *textbuffer = textedit->textview->textbuffer;
+    struct poulpe_selection *selection = textedit->selection;
+    uint32_t line_index = textedit->cursor->position.x;
+    uint32_t text_size = poulpe_textbuffer_text_size(textbuffer);
+
+    if (poulpe_selection_active(selection))
+    {
+        if (text_size < 2)
+            return error;
+        
+        if (selection->ajusted.end.x > (text_size - 2))
+            return POULPE_ERROR_NONE;
+
+        error = poulpe_textbuffer_text_insert(textbuffer, selection->ajusted.start.x);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_line_push_back(textbuffer, selection->ajusted.start.x, poulpe_textbuffer_text_at(textbuffer, selection->ajusted.end.x + 2), NULL);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_text_erase(textbuffer, selection->ajusted.end.x + 2);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        poulpe_selection_move_start_down(selection);
+        poulpe_selection_move_end_down(selection);
+        poulpe_cursor_move_down(textedit->cursor);
+    }
+    else
+    {
+        if (text_size < 2)
+            return error;
+
+        if (line_index > (text_size - 2))
+            return error;
+
+        error = poulpe_textbuffer_text_insert(textbuffer, line_index + 2);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_line_push_back(textbuffer, line_index + 2, poulpe_textbuffer_text_at(textbuffer, line_index), NULL);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        error = poulpe_textbuffer_text_erase(textbuffer, line_index);
+        if (error != POULPE_ERROR_NONE)
+            return error;
+
+        poulpe_cursor_move_down(textedit->cursor);
+    }
+
+    poulpe_textbuffer_tree_edit(textbuffer);
+    poulpe_cursor_update(textedit->cursor);
+    poulpe_selection_update(textedit->selection);
+    _ensure_cursor_visiblity(textedit);
+
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_keyboard_shift_up(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    poulpe_selection_move_end_up(textedit->selection);
+    poulpe_selection_update(textedit->selection);
+    poulpe_cursor_update_position(textedit->cursor, textedit->selection->current.end);
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_keyboard_shift_down(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    poulpe_selection_move_end_down(textedit->selection);
+    poulpe_selection_update(textedit->selection);
+    poulpe_cursor_update_position(textedit->cursor, textedit->selection->current.end);
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_keyboard_shift_left(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    poulpe_selection_move_end_left(textedit->selection);
+    poulpe_selection_update(textedit->selection);
+    poulpe_cursor_update_position(textedit->cursor, textedit->selection->current.end);
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
+    return POULPE_ERROR_NONE;
+}
+
+static enum poulpe_error _handle_keyboard_shift_right(struct poulpe_textedit *textedit, struct poulpe_event_keyboard *event)
+{
+    SAKE_MACRO_UNUSED(event);
+    poulpe_selection_move_end_right(textedit->selection);
+    poulpe_selection_update(textedit->selection);
+    poulpe_cursor_update_position(textedit->cursor, textedit->selection->current.end);
+    poulpe_cursor_update(textedit->cursor);
+    _ensure_cursor_visiblity(textedit);
     return POULPE_ERROR_NONE;
 }
 
@@ -940,7 +1147,7 @@ static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedi
             if (error != POULPE_ERROR_NONE)
                 return error;
         }
-        else if (line_index < poulpe_textbuffer_text_size(textbuffer) - 1)
+        else if (line_index < (poulpe_textbuffer_text_size(textbuffer) - 1))
         {
             uint32_t next_line_raw_size = poulpe_textbuffer_line_eof_size(textbuffer, line_index + 1);
             error = poulpe_textbuffer_line_insert(textbuffer,
@@ -958,7 +1165,9 @@ static enum poulpe_error _handle_keyboard_delete(struct poulpe_textedit *textedi
     }
 
     poulpe_textbuffer_tree_edit(textbuffer);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
         
@@ -1016,7 +1225,9 @@ static enum poulpe_error _handle_keyboard_backspace(struct poulpe_textedit *text
     }
 
     poulpe_textbuffer_tree_edit(textbuffer);
-    
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
     
@@ -1030,14 +1241,13 @@ static enum poulpe_error _handle_keyboard_left(struct poulpe_textedit *textedit,
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     if (poulpe_selection_active(textedit->selection))
-    {
         textedit->cursor->position = textedit->selection->ajusted.start;
-        poulpe_selection_clear(textedit->selection);
-        poulpe_cursor_reset(textedit->cursor);
-    }
     else
         poulpe_cursor_move_left(textedit->cursor);
-    
+
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);    
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -1051,14 +1261,13 @@ static enum poulpe_error _handle_keyboard_right(struct poulpe_textedit *textedit
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     if (poulpe_selection_active(textedit->selection))
-    {
         textedit->cursor->position = textedit->selection->ajusted.end;
-        poulpe_selection_clear(textedit->selection);
-        poulpe_cursor_reset(textedit->cursor);
-    }
     else
         poulpe_cursor_move_right(textedit->cursor);
-    
+
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -1072,13 +1281,12 @@ static enum poulpe_error _handle_keyboard_up(struct poulpe_textedit *textedit, s
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     if (poulpe_selection_active(textedit->selection))
-    {
         textedit->cursor->position = textedit->selection->ajusted.start;
-        poulpe_selection_clear(textedit->selection);
-    }
 
     poulpe_cursor_move_up(textedit->cursor);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -1093,13 +1301,12 @@ static enum poulpe_error _handle_keyboard_down(struct poulpe_textedit *textedit,
     enum poulpe_error error = POULPE_ERROR_NONE;
 
     if (poulpe_selection_active(textedit->selection))
-    {
         textedit->cursor->position = textedit->selection->ajusted.end;
-        poulpe_selection_clear(textedit->selection);
-    }
 
     poulpe_cursor_move_down(textedit->cursor);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
     
@@ -1149,7 +1356,9 @@ static enum poulpe_error _handle_keyboard_enter(struct poulpe_textedit *textedit
     poulpe_cursor_move_down(textedit->cursor);
 
     poulpe_textbuffer_tree_edit(textbuffer);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 
@@ -1195,6 +1404,7 @@ static enum poulpe_error _handle_keyboard_shift_tab(struct poulpe_textedit *text
 
             i++;
         }
+        poulpe_selection_update(textedit->selection);
     }
     else
     {
@@ -1248,6 +1458,7 @@ static enum poulpe_error _handle_keyboard_tab(struct poulpe_textedit *textedit, 
             poulpe_selection_move_end_right(selection);
             poulpe_cursor_move_right(textedit->cursor);
         }
+        poulpe_selection_update(textedit->selection);
     }
     else
     {
@@ -1298,7 +1509,9 @@ static enum poulpe_error _handle_keyboard_default(struct poulpe_textedit *texted
     }
 
     poulpe_textbuffer_tree_edit(textbuffer);
-
+    poulpe_selection_update_start(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update_end(textedit->selection, textedit->cursor->position);
+    poulpe_selection_update(textedit->selection);
     poulpe_cursor_update(textedit->cursor);
     _ensure_cursor_visiblity(textedit);
 

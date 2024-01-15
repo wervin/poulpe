@@ -87,11 +87,8 @@ enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
     
 end_child:
     igEndChild();
-
     igPopStyleVar(4);
-
     igPopStyleColor(11);
-
     igPopFont();
 
     return error;

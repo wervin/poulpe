@@ -34,8 +34,13 @@ void poulpe_selection_update_end(struct poulpe_selection *selection, ImVec2 posi
 sake_string poulpe_selection_to_str(struct poulpe_selection *selection);
 void poulpe_selection_move_start_right(struct poulpe_selection *selection);
 void poulpe_selection_move_start_left(struct poulpe_selection *selection);
+void poulpe_selection_move_start_up(struct poulpe_selection *selection);
+void poulpe_selection_move_start_down(struct poulpe_selection *selection);
 void poulpe_selection_move_end_right(struct poulpe_selection *selection);
 void poulpe_selection_move_end_left(struct poulpe_selection *selection);
+void poulpe_selection_move_end_up(struct poulpe_selection *selection);
+void poulpe_selection_move_end_down(struct poulpe_selection *selection);
 void poulpe_selection_select_all(struct poulpe_selection *selection);
+void poulpe_selection_update(struct poulpe_selection *selection);
 
 #endif /* POULPE_COMPONENTS_SELECTION_H */

@@ -56,7 +56,8 @@ enum poulpe_error poulpe_cursorinfo_draw(struct poulpe_cursorinfo *cursorinfo)
     char buffer[256];
     snprintf(buffer, 256, "Ln %u, Col %u", (uint32_t) cursor_position.x + 1, (uint32_t) cursor_position.y + 1);
 
-    igButton(buffer, (ImVec2) {0, content.y});
+    igSetCursorPosY(1);
+    igText(buffer);
 
     return POULPE_ERROR_NONE;
 }
