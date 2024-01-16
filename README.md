@@ -4,6 +4,8 @@
 
 **Poulpe** is a text editor library for [cimgui](https://github.com/cimgui/cimgui), a thin C wrapper built arround the excellent immediate mode gui [Dear ImGui](https://github.com/ocornut/imgui). **Poulpe** is designed to be lightweight and includes my favorite shortcuts and features from other editors.
 
+![Screenshot from 2024-01-16 17-12-03](https://github.com/wervin/poulpe/assets/29201790/bc561149-bd15-4c6a-bdca-1d6c3da09d4c)
+
 ## Setup
 This project is developed and tested on Ubuntu 23.10. There are no current plans to port it to Windows or Mac.
 
