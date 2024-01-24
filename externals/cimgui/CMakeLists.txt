@@ -49,6 +49,9 @@ target_include_directories(cimgui PUBLIC
   ${SOURCE_DIR}/imgui/backends
 )
 
+target_compile_options(cimgui PRIVATE 
+    -fPIC)
+
 target_compile_definitions(cimgui PRIVATE 
     IMGUI_IMPL_API=extern\ \"C\"
     IMGUI_DISABLE_OBSOLETE_KEYIO

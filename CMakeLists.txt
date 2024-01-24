@@ -37,7 +37,7 @@ set(POULPE_SOURCES
     src/poulpe/theme.c
 )
 
-add_library(poulpe ${POULPE_SOURCES})
+add_library(poulpe SHARED ${POULPE_SOURCES})
 
 target_link_libraries(poulpe PUBLIC
     m
