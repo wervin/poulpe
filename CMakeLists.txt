@@ -39,7 +39,7 @@ set(POULPE_SOURCES
 
 add_library(poulpe ${POULPE_SOURCES})
 
-target_link_libraries(poulpe
+target_link_libraries(poulpe PUBLIC
     m
     sake
     cglm
