@@ -7,7 +7,6 @@ typedef struct ImFont ImFont;
 
 struct poulpe_style_info
 {
-    ImFont *icon_font;
     ImFont *large_font;
     ImFont *small_font;
     enum poulpe_theme_type theme;
@@ -15,7 +14,6 @@ struct poulpe_style_info
 
 struct poulpe_style
 {
-    ImFont *icon_font;
     ImFont *large_font;
     ImFont *small_font;
     const struct poulpe_theme *theme;

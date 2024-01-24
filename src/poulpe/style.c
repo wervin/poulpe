@@ -13,7 +13,6 @@ void poulpe_style_set(struct poulpe_style_info *info)
 {
     poulpe_style = (struct poulpe_style){0};
 
-    poulpe_style.icon_font = info->icon_font;
     poulpe_style.large_font = info->large_font;
     poulpe_style.small_font = info->small_font;
     
