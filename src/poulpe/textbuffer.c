@@ -17,7 +17,6 @@
 #include "poulpe/history.h"
 
 static const char * _read(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
-static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer);
 
 static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
 static enum poulpe_error _redo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction);
@@ -143,16 +142,9 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
         return POULPE_ERROR_MEMORY;
     }
 
-    textbuffer->language_type = poulpe_language_auto_detect(textbuffer->filename);
-
-    if (textbuffer->language_type == POULPE_LANGUAGE_TYPE_RAW)
-        return POULPE_ERROR_NONE;
-
-    enum poulpe_error error = _init_parser(textbuffer);
+    enum poulpe_error error = poulpe_textbuffer_set_language(textbuffer, poulpe_language_auto_detect(textbuffer->filename));
     if (error != POULPE_ERROR_NONE)
         return error;
-
-    poulpe_textbuffer_tree_parse(textbuffer);
 
     return POULPE_ERROR_NONE;
 }
@@ -219,17 +211,25 @@ void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
 
 enum poulpe_error poulpe_textbuffer_set_language(struct poulpe_textbuffer *textbuffer, enum poulpe_language_type language)
 {
+    if (textbuffer->cursor)
+        ts_query_cursor_delete(textbuffer->cursor);
+    if (textbuffer->query)
+        ts_query_delete(textbuffer->query);
+    if (textbuffer->tree)
+        ts_tree_delete(textbuffer->tree);
+    if (textbuffer->parser)
+        ts_parser_delete(textbuffer->parser);
+
+    if (language == POULPE_LANGUAGE_TYPE_RAW)
+        goto end;
+
+    textbuffer->parser = ts_parser_new();
+
     ts_parser_set_language(textbuffer->parser, poulpe_language_parser(language));
 
     const char *highlight_query = poulpe_language_query(language);
     if (!highlight_query)
         return POULPE_ERROR_NONE;
-
-    if (textbuffer->cursor)
-        ts_query_cursor_delete(textbuffer->cursor);
-    
-    if (textbuffer->query)
-        ts_query_delete(textbuffer->query);
 
     TSQueryError query_error;
     uint32_t error_offset = 0;
@@ -242,8 +242,10 @@ enum poulpe_error poulpe_textbuffer_set_language(struct poulpe_textbuffer *textb
 
     textbuffer->cursor = ts_query_cursor_new();
 
-    textbuffer->language_type = language;
+    poulpe_textbuffer_tree_parse(textbuffer);
 
+end:
+    textbuffer->language_type = language;
     return POULPE_ERROR_NONE;
 }
 
@@ -570,30 +572,6 @@ static const char * _read(void *payload, uint32_t byte_index, TSPoint position, 
     poulpe_text text = textbuffer->text;
     *bytes_read = position.row < poulpe_text_size(text) && position.column < poulpe_line_raw_size(text[position.row]) ? strlen(text[position.row] + position.column) : 0;
     return text[position.row] + position.column;
-}
-
-static enum poulpe_error _init_parser(struct poulpe_textbuffer *textbuffer)
-{
-    textbuffer->parser = ts_parser_new();
-
-    ts_parser_set_language(textbuffer->parser, poulpe_language_parser(textbuffer->language_type));
-
-    const char *highlight_query = poulpe_language_query(textbuffer->language_type);
-    if (!highlight_query)
-        return POULPE_ERROR_NONE;
-
-    TSQueryError query_error;
-    uint32_t error_offset = 0;
-    textbuffer->query = ts_query_new(poulpe_language_parser(textbuffer->language_type), highlight_query, strlen(highlight_query), &error_offset, &query_error);
-    if (query_error != TSQueryErrorNone)
-    {
-        POULPE_LOG_ERROR(POULPE_ERROR_VALUE, "Query error");
-        return POULPE_ERROR_VALUE;
-    }
-
-    textbuffer->cursor = ts_query_cursor_new();
-
-    return POULPE_ERROR_NONE;
 }
 
 static enum poulpe_error _undo_subaction(struct poulpe_textbuffer *textbuffer, struct poulpe_subaction *subaction)
