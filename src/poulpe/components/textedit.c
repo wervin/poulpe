@@ -134,7 +134,7 @@ enum poulpe_error poulpe_textedit_draw(struct poulpe_textedit *textedit)
 {
     enum poulpe_error error = POULPE_ERROR_NONE;
 
-    igPushStyleVar_Vec2(ImGuiStyleVar_FramePadding, (ImVec2) {2.f, 0.f});
+    igPushStyleVar_Vec2(ImGuiStyleVar_FramePadding, (ImVec2) {1.5f, 0.f});
 
     igSameLine(0.0f, 0.0f);
     if (!igBeginChild_Str("Poulpe##textedit", (ImVec2) {0}, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysHorizontalScrollbar))

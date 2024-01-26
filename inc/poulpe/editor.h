@@ -1,10 +1,6 @@
 #ifndef POULPE_EDITOR_H
 #define POULPE_EDITOR_H
 
-#include <cimgui.h>
-
-#include <stdint.h>
-
 #include "poulpe/error.h"
 #include "poulpe/language.h"
 
