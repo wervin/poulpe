@@ -98,3 +98,8 @@ const char * poulpe_editor_filename(struct poulpe_editor *editor)
 {
     return editor->textview->textbuffer->filename;
 }
+
+enum poulpe_error poulpe_editor_set_language(struct poulpe_editor *editor, enum poulpe_language_type language)
+{
+    return poulpe_textbuffer_set_language(editor->textview->textbuffer, language);
+}

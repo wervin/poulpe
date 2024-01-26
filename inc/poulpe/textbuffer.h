@@ -44,6 +44,7 @@ enum poulpe_error poulpe_textbuffer_open_file(struct poulpe_textbuffer * textbuf
 enum poulpe_error poulpe_textbuffer_save_file(struct poulpe_textbuffer * textbuffer);
 void poulpe_textbuffer_tree_parse(struct poulpe_textbuffer *textbuffer);
 void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer);
+enum poulpe_error poulpe_textbuffer_set_language(struct poulpe_textbuffer *textbuffer, enum poulpe_language_type language);
 enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer);
 enum poulpe_error poulpe_textbuffer_redo(struct poulpe_textbuffer *textbuffer);
 enum poulpe_error poulpe_textbuffer_new_action(struct poulpe_textbuffer *textbuffer);

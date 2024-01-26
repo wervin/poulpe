@@ -217,6 +217,36 @@ void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
     poulpe_textbuffer_tree_parse(textbuffer);
 }
 
+enum poulpe_error poulpe_textbuffer_set_language(struct poulpe_textbuffer *textbuffer, enum poulpe_language_type language)
+{
+    ts_parser_set_language(textbuffer->parser, poulpe_language_parser(language));
+
+    const char *highlight_query = poulpe_language_query(language);
+    if (!highlight_query)
+        return POULPE_ERROR_NONE;
+
+    if (textbuffer->cursor)
+        ts_query_cursor_delete(textbuffer->cursor);
+    
+    if (textbuffer->query)
+        ts_query_delete(textbuffer->query);
+
+    TSQueryError query_error;
+    uint32_t error_offset = 0;
+    textbuffer->query = ts_query_new(poulpe_language_parser(language), highlight_query, strlen(highlight_query), &error_offset, &query_error);
+    if (query_error != TSQueryErrorNone)
+    {
+        POULPE_LOG_ERROR(POULPE_ERROR_VALUE, "Query error");
+        return POULPE_ERROR_VALUE;
+    }
+
+    textbuffer->cursor = ts_query_cursor_new();
+
+    textbuffer->language_type = language;
+
+    return POULPE_ERROR_NONE;
+}
+
 enum poulpe_error poulpe_textbuffer_undo(struct poulpe_textbuffer *textbuffer)
 {
     if (!poulpe_history_size(textbuffer->history))
