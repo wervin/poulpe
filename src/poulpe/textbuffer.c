@@ -171,6 +171,8 @@ void poulpe_textbuffer_free(struct poulpe_textbuffer * textbuffer)
 {
     if (textbuffer->filename)
         sake_string_free(textbuffer->filename);
+    if (textbuffer->path)
+        sake_string_free(textbuffer->path);
     if (textbuffer->text)
         poulpe_text_free(textbuffer->text);
 

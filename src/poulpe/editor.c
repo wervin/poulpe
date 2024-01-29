@@ -49,6 +49,7 @@ void poulpe_editor_free(struct poulpe_editor *editor)
 {
     poulpe_component_free((struct poulpe_component *) editor->statusbar);
     poulpe_component_free((struct poulpe_component *) editor->textview);
+    free(editor);
 }
 
 enum poulpe_error poulpe_editor_draw(struct poulpe_editor *editor)
