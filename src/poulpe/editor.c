@@ -95,6 +95,11 @@ end_child:
     return error;
 }
 
+enum poulpe_error poulpe_editor_save(struct poulpe_editor *editor)
+{
+    return poulpe_textbuffer_save_file(editor->textview->textbuffer);
+}
+
 const char * poulpe_editor_filename(struct poulpe_editor *editor)
 {
     return editor->textview->textbuffer->filename;
