@@ -200,7 +200,7 @@ void poulpe_textbuffer_tree_parse(struct poulpe_textbuffer *textbuffer)
         .read = _read
     };
 
-    if (textbuffer->tree) 
+    if (textbuffer->tree)
         ts_tree_delete(textbuffer->tree);
 
     textbuffer->tree = ts_parser_parse(textbuffer->parser, NULL, input);
@@ -214,13 +214,25 @@ void poulpe_textbuffer_tree_edit(struct poulpe_textbuffer *textbuffer)
 enum poulpe_error poulpe_textbuffer_set_language(struct poulpe_textbuffer *textbuffer, enum poulpe_language_type language)
 {
     if (textbuffer->cursor)
+    {
         ts_query_cursor_delete(textbuffer->cursor);
+        textbuffer->cursor = NULL;
+    }
     if (textbuffer->query)
+    {
         ts_query_delete(textbuffer->query);
+        textbuffer->query = NULL;
+    }
     if (textbuffer->tree)
+    {
         ts_tree_delete(textbuffer->tree);
+        textbuffer->tree = NULL;
+    }
     if (textbuffer->parser)
+    {
         ts_parser_delete(textbuffer->parser);
+        textbuffer->parser = NULL;
+    }
 
     if (language == POULPE_LANGUAGE_TYPE_RAW)
         goto end;
