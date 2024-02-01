@@ -649,10 +649,10 @@ static enum poulpe_error _handle_mouse_left_double_clicked(struct poulpe_textedi
     }
     else
     {
-        while (start_word > 0 && !sake_utils_is_word_separator(line[start_word]))
+        while (start_word > 0 && !isspace(line[start_word]))
             start_word--;
 
-        while (end_word < length && !sake_utils_is_word_separator(line[end_word]))
+        while (end_word < length && !isspace(line[end_word]))
             end_word++;
     }
     
